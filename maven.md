@@ -153,7 +153,7 @@ mvn org.apache.maven.plugins:maven-archetype-plugin:2.0-alpha-5:generate
 
    - 使用maven生成可执行jar包：默认生成的jar包META-INF/MANIFEST.MF文件中不包含main-class信息，可借助maven-shade-plugin插件指定main-class：
 
-   ![1575510884158](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1575510884158.png)
+   ![1575510884158](maven.assets\1575510884158.png)
 
 
 
@@ -161,7 +161,7 @@ eclipse中插件使用
 
 执行多个步骤（Run As菜单提供单个步骤执行）：
 
-![1575516749948](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1575516749948.png)
+![1575516749948](maven.assets\1575516749948.png)
 
 
 
@@ -289,11 +289,11 @@ compiler插件配置java编译版本
 
   - system：系统依赖范围。与三种classpath的关系与provided一致，但需要指定systemPath，因为其不是依赖maven仓库解析的，而且往往与本机系统绑定，所以移植性低
 
-    ![1575538126001](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1575538126001.png)
+    ![1575538126001](maven.assets\1575538126001.png)
 
   - import：导入依赖范围，不会对三种classpath产生实际影响。import在dependencyManagement元素中在有效，一般用来导入pom类型依赖，用来引入指定pom文件中的dependencyManagement依赖配置
 
-    ![1576115211966](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576115211966.png)
+    ![1576115211966](maven.assets\1576115211966.png)
 
     > 若有多个项目使用的依赖版本是一致的，则可以定义一个使用dependencyManagement专门管理依赖的POM，然后在各个项目中导入这些依赖管理配置
 
@@ -307,7 +307,7 @@ compiler插件配置java编译版本
 
 - optional：标记依赖是否可选。表示一个项目实现了多种特性，如一个项目中实现了支持多种数据库连接（实际使用时只会依赖一种数据库）
 
-  ![1575545598103](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1575545598103.png)
+  ![1575545598103](maven.assets\1575545598103.png)
 
   - 加入存在依赖关系：A->B，B->X(可选)，B->Y(可选)，实际X或者Y依赖并不会传递到A，A中需要显示声明依赖。如承上，A中需要显示声明依赖Mysql还是Postgresql
 
@@ -315,7 +315,7 @@ compiler插件配置java编译版本
 
 - exclusions：用来排除传递性依赖，如：
 
-  ![1575546296174](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1575546296174.png)
+  ![1575546296174](maven.assets\1575546296174.png)
 
   > exclusion只需指定groupId和artifactId
 
@@ -420,7 +420,7 @@ groupId/artifactId/version/artifactId-version.packaging
 
   - 私服：自行搭建的一个maven仓库，依赖本地找不到时会到私服下载，当私服不存在对应依赖时，私服会先将远程仓库的依赖缓存到私服中，然后提供下载。
 
-    ![1575550812314](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1575550812314.png)
+    ![1575550812314](maven.assets\1575550812314.png)
 
     - 使用私服的好处：
       - 节省外网带宽
@@ -441,11 +441,11 @@ groupId/artifactId/version/artifactId-version.packaging
 
 例1：
 
-![1575892976190](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1575892976190.png)
+![1575892976190](maven.assets\1575892976190.png)
 
 例2：
 
-![1575708591693](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1575708591693.png)
+![1575708591693](maven.assets\1575708591693.png)
 
 - releasse：仓库的版本下载支持配置
   - enabled=true：表示支持仓库的版本下载支持
@@ -465,7 +465,7 @@ groupId/artifactId/version/artifactId-version.packaging
 
 在pom.xml文件中配置：
 
-![1575892400514](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1575892400514.png)
+![1575892400514](maven.assets\1575892400514.png)
 
 - repository：发布版本构件的仓库
   - id：仓库标识，若有验证，与server中id一致
@@ -900,9 +900,9 @@ pom文件中的配置
 
 maven的生命周期的阶段是通过插件实现的，其实是通过绑定插件中目标实现：
 
-![1576046047173](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576046047173.png)
+![1576046047173](maven.assets\1576046047173.png)
 
-![1576046132521](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576046132521.png)
+![1576046132521](maven.assets\1576046132521.png)
 
 > 其他打包类型绑定关系参考官网
 
@@ -1038,7 +1038,7 @@ mvn help:describe-Dplugin=compiler
 
 ## 插件仓库
 
-![1576052337230](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576052337230.png)
+![1576052337230](maven.assets\1576052337230.png)
 
 
 
@@ -1107,11 +1107,11 @@ mvn help:describe-Dplugin=compiler
 
 父pom配置：
 
-![1576119969675](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576119969675.png)
+![1576119969675](maven.assets\1576119969675.png)
 
 子pom配置：
 
-![1576120008219](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576120008219.png)
+![1576120008219](maven.assets\1576120008219.png)
 
 
 
@@ -1415,17 +1415,17 @@ hodson是jetkin的前身
 
 一个典型war包目录结构：
 
-![1576203448541](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576203448541.png)
+![1576203448541](maven.assets\1576203448541.png)
 
 一个典型的web项目的maven目录结构：
 
-![1576203495693](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576203495693.png)
+![1576203495693](maven.assets\1576203495693.png)
 
 ## 使用jetty-maven-piugins
 
 使用jetty-maven-piugins可将更新的代码部署到Jetty容器中，其简单配置如下：
 
-![1576207324742](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576207324742.png)
+![1576207324742](maven.assets\1576207324742.png)
 
 这里配置了每10s扫描项目的代码是否发生变化
 
@@ -1433,7 +1433,7 @@ hodson是jetkin的前身
 
 只有org.apache.maven.plugins和org.codehaus.mojo两个groupId下的插件才可以通过前缀执行插件目标，为了能在命令行中执行`mvn jetty:run`，需在setting.xml中配置：
 
-![1576207627709](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576207627709.png)
+![1576207627709](maven.assets\1576207627709.png)
 
 此时可以使用mvn jetty:run命令了
 
@@ -1453,7 +1453,7 @@ cargo支持两种本地部署方式
 
 - standalone：cargo会从web容器的安装目录复制一份配置到用户指定的目录，然后在此基础上部署应用，每次重新构件时这个目录会被清空
 
-  ![1576217254034](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576217254034.png)
+  ![1576217254034](maven.assets\1576217254034.png)
 
   - container
     - containerId：容器类型
@@ -1464,7 +1464,7 @@ cargo支持两种本地部署方式
 
 - existing：用户需要指定指定现有的web容器配置目录，然后cargo会直接使用这些配置并将应用部署到其对应的位置
 
-  ![1576217278954](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576217278954.png)
+  ![1576217278954](maven.assets\1576217278954.png)
 
   > configuration中的home对应现有web容器目录，部署后可以再webapps中找到部署的maven项目
 
@@ -1474,7 +1474,7 @@ cargo支持两种本地部署方式
 
 ### 部署到远程web容器
 
-![1576217497253](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576217497253.png)
+![1576217497253](maven.assets\1576217497253.png)
 
 - container
   - type：remote表示远程部署，不显式指定，maven使用默认值installed
@@ -1500,7 +1500,7 @@ cargo支持两种本地部署方式
 
 一般版本转换流程（一般在主干中体现）：
 
-![1576225615002](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576225615002.png)
+![1576225615002](maven.assets\1576225615002.png)
 
 开始时快照版本，向外发布时转换为发布版，然后再转换为快照版本，再在此版本上进行开发
 
@@ -1513,7 +1513,7 @@ cargo支持两种本地部署方式
 
 打标签（tag）：指主干中某一个版本的代码以一个标签标识，之后可根据标签获得对应版本，如svn中打标签示例：
 
-![1576225849781](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576225849781.png)
+![1576225849781](maven.assets\1576225849781.png)
 
 
 
@@ -1550,7 +1550,7 @@ maven中版本号定义约定为：<主版本>.<次版本>.增量版本-<里程�
 
 典型项目版本变化过程：
 
-![1576228444315](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576228444315.png)
+![1576228444315](maven.assets\1576228444315.png)
 
 
 
@@ -1560,7 +1560,7 @@ Maven Release Plugin插件提供了自动化发布版本的功能，它主要有
 
 - release:prepare：准备发布版本
 
-  ![1576457941574](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576457941574.png)
+  ![1576457941574](maven.assets\1576457941574.png)
 
 - release:rollback：将版本回退至release:prepare之前，但不会删除release:prepare生成的标签，需手动删除
 
@@ -1617,11 +1617,11 @@ Maven Release Plugin插件提供了自动化发布版本的功能，它主要有
 
 假如项目中有配置如下：
 
-![1576463664025](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576463664025.png)
+![1576463664025](maven.assets\1576463664025.png)
 
 使用maven属性配置开发环境的值：
 
-![1576463727526](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576463727526.png)
+![1576463727526](maven.assets\1576463727526.png)
 
 注意，maven属性只有在POM文件中才能解析，也就是${db.username}放到POM中会变成dev，但如果放到src/main/resources目录下的文件中，构建时它还是${db.username}。
 
@@ -1694,7 +1694,7 @@ maven-resources-plugin除了将项目主资源文件复制到主代码编译输�
 
 ## maven profile
 
-![1576564883864](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576564883864.png)
+![1576564883864](maven.assets\1576564883864.png)
 
 ### 激活profile
 
@@ -1722,7 +1722,7 @@ maven-resources-plugin除了将项目主资源文件复制到主代码编译输�
 
    比如存在以下配置：
 
-   ![1576565337746](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576565337746.png)
+   ![1576565337746](maven.assets\1576565337746.png)
 
    然后在命令行中激活：
 
@@ -1732,16 +1732,16 @@ maven-resources-plugin除了将项目主资源文件复制到主代码编译输�
 
 4. 操作系统环境激活
 
-   ![1576565480390](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576565480390.png)
+   ![1576565480390](maven.assets\1576565480390.png)
    family值包括Windows、UNIX、Mac等，其他几项可通过环境系统属性获得：os.name、os.arch、os.version
 
 5. 文件存在与否激活：maven可根据项目中某个文件是否存在来决定是否激活profile：
 
-   ![1576566707949](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576566707949.png)
+   ![1576566707949](maven.assets\1576566707949.png)
 
 6. 默认激活
 
-   ![1576566793042](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576566793042.png)
+   ![1576566793042](maven.assets\1576566793042.png)
 
    不过需注意的是，如果POM中有任何一个profile通过以上任意一个方式激活了，所有的默认激活配置都会失效。可通过命令查看当前激活的profile：
 
@@ -1763,11 +1763,11 @@ maven-resources-plugin除了将项目主资源文件复制到主代码编译输�
 
 POM中profile可使用的元素：
 
-![1576568213863](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576568213863.png)
+![1576568213863](maven.assets\1576568213863.png)
 
 POM外部的profile（如settings.xml）可使用的元素：
 
-![1576568304233](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576568304233.png)
+![1576568304233](maven.assets\1576568304233.png)
 
 POM外部的profile支持元素为什么这么少？
 
@@ -1784,9 +1784,9 @@ web项目中存在以下资源文件目录：
 
 前面使用maven-resources-plugin配置了普通资源文件的过滤，同理可通过maven-war-plugin插件配置web资源文件过滤，比如：构建项目时为不同用户构建不一样的资源文件（例如客户logo不同、css主体不同）
 
-![1576570392428](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576570392428.png)
+![1576570392428](maven.assets\1576570392428.png)
 
-![1576570407490](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576570407490.png)
+![1576570407490](maven.assets\1576570407490.png)
 
 通过mvn clean install -Pclient-a告诉web资源文件使用logo图片a.jpg，css主题使用red
 
@@ -1794,11 +1794,11 @@ web项目中存在以下资源文件目录：
 
 ## 在profile中激活集成测试
 
-![1576571310252](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576571310252.png)
+![1576571310252](maven.assets\1576571310252.png)
 
 profile中配置执行TestNG测试组
 
-![1576571368181](D:\BaiduNetdiskDownload\markdown笔记\maven.assets\1576571368181.png)
+![1576571368181](maven.assets\1576571368181.png)
 
 也就是默认是执行单元测试的，可以通过激活profile full来执行集成测试
 

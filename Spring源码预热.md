@@ -73,7 +73,7 @@ public class IOCContainerTest {
 
 ​	用于创建Bean对象的工厂需实现的顶层接口，定义了一些方法，具体实现交给了子类。IOC容器使用的默认实现类是`DefaultListableBeanFactory`，其相关的UML类图如下：
 
-![1555333938528](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1555333938528.png)
+![1555333938528](Spring源码预热.assets\1555333938528.png)
 
 需注意的类或接口：
 
@@ -89,13 +89,13 @@ public class IOCContainerTest {
 
 ​	BeanDefiniton是用于描述Spring中的Bean而抽象出来的统一接口，常用实现类是RootBeanDefinition，继承结构如下：
 
-![1555335652419](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1555335652419.png)
+![1555335652419](Spring源码预热.assets\1555335652419.png)
 
 ### BeanDefinitionReader（读取Bean）
 
 ​	BeanDefinitionReader实现类是用于解析Spring配置文件，即读取配置文件来去创建Bean，来源可以是classPath、fileSystem、网络资源、servletContext等，如XmlBeanDefinitionReader就是用于解析XML文件结构的，其UML类图如下：
 
-![1555336046942](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1555336046942.png)
+![1555336046942](Spring源码预热.assets\1555336046942.png)
 
 
 
@@ -863,7 +863,7 @@ public interface View {
 
 ​	Spring中提供了13个视图解析器：
 
-![1558266886845](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1558266886845.png)
+![1558266886845](Spring源码预热.assets\1558266886845.png)
 
 
 
@@ -875,13 +875,13 @@ public interface View {
 
 使用需引入：<%@taglib prefix="s" uri="http://www.springframework.org/tags/form" %>
 
-![1558268025288](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1558268025288.png)
+![1558268025288](Spring源码预热.assets\1558268025288.png)
 
 ​	一些通用的标签：
 
 使用需引入：<%@taglib prefix="sf" uri="http://www.springframework.org/tags" %>
 
-![1558268210813](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1558268210813.png)
+![1558268210813](Spring源码预热.assets\1558268210813.png)
 
 #### 通过<s:message>标签实现国际化
 
@@ -924,7 +924,7 @@ public MessageSource messageSourceForReload(){
 
 在类的根路径中创建message文件：
 
-![1558359566237](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1558359566237.png)
+![1558359566237](Spring源码预热.assets\1558359566237.png)
 
 message_en_US.properties:
 
@@ -971,7 +971,7 @@ jsp文件中引用：
 
 中文环境：
 
-![1558359776746](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1558359776746.png)
+![1558359776746](Spring源码预热.assets\1558359776746.png)
 
 #### <s:url>标签
 
@@ -1076,7 +1076,7 @@ public ThymeleafViewResolver viewResolver(){
 
 ​	像许多web MVC framework框架一样，Spring也是通过一个核心的Servlet类去处理请求，在Spring中是DispatherServlet，它实现了HttpServlet，也就是前置处理器。请求处理的过程如图：
 
-![1560955447964](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1560955447964.png)
+![1560955447964](Spring源码预热.assets\1560955447964.png)
 
 #### 基于WebApplicationInitializer配置
 
@@ -1136,7 +1136,7 @@ public interface WebApplicationInitializer {
 
 在Spring MVC中，典型的上下文等级如下：
 
-![ 1561268232853](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1561268232853.png)
+![ 1561268232853](Spring源码预热.assets\1561268232853.png)
 
 ​	DispatcherServlet初始化时，spring mvc会在WEB_INF目录中寻找一个名为【servlet-name】-servlet.xml的文件，创建在此文件中定义的bean，如果全局中有相同名字的Bean，会覆盖。如下面文件定义，寻找的时golfing-servlet文件。
 
@@ -1156,7 +1156,7 @@ public interface WebApplicationInitializer {
 
 除了上面的上下文等级结构，Spring Web MVC中还存在一种单个Root Context的上下文等级结构：
 
-![1561295081493](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1561295081493.png)
+![1561295081493](Spring源码预热.assets\1561295081493.png)
 
 这种结构可以通过设置一个空的contextConfigLocation servlet初始化参数类配置：
 
@@ -1537,7 +1537,7 @@ public void setApplicationContext(ApplicationContext applicationContext) {
 }
 ```
 
-![1558874260203](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1558874260203.png)
+![1558874260203](Spring源码预热.assets\1558874260203.png)
 
 
 
@@ -1743,7 +1743,7 @@ Spring提供了多种方式将异常转换为响应：
 
 spring中一些会默认映射为HTTP状态码的异常如下图，这些异常会由spring自动抛出，是作为DispatherServlet处理过程中出现问题抛出的。如果DispatherServlet无法找到合适的处理请求的控制器方法，将会抛出NoSuchRequestHandlingMethodException异常，最终结果是404的状态反映。
 
-![1561907024071](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1561907024071.png)
+![1561907024071](Spring源码预热.assets\1561907024071.png)
 
 #### 使用ResponseStatus映射异常到HTTP状态码：
 
@@ -1775,7 +1775,7 @@ public String spittle(@PathVariable("spittleId") Long spitterId, Model model){
 
 返回效果：
 
-![1562498512341](D:\BaiduNetdiskDownload\markdown笔记\Spring源码预热.assets\1562498512341.png)
+![1562498512341](Spring源码预热.assets\1562498512341.png)
 
 
 

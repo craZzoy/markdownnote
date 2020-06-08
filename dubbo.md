@@ -10,7 +10,7 @@ dubbo是一个服务协调的框架，其中包括服务发现、服务治理、
 
 简单架构图：
 
-![1569424435857](C:\Users\zwz\Documents\dubbo.assets\1569424435857.png)
+![1569424435857](dubbo.assets\1569424435857.png)
 
 ### dubbo-pay-api接口提供
 
@@ -234,7 +234,7 @@ public class App
 
 可通过ZooInspector查看节点内容：
 
-![1569423236633](C:\Users\zwz\Documents\dubbo.assets\1569423236633.png)
+![1569423236633](dubbo.assets\1569423236633.png)
 
 ```properties
 dubbo%3A%2F%2F169.254.238.92%3A20880%2Fcom.gupao.Iservice%3Fanyhost%3Dtrue%26application%3Ddubbo-pay-service%26bean.name%3Dcom.gupao.Iservice%26deprecated%3Dfalse%26dubbo%3D2.0.2%26dynamic%3Dtrue%26generic%3Dfalse%26interface%3Dcom.gupao.Iservice%26methods%3Dpay%26pid%3D30764%26register%3Dtrue%26release%3D2.7.3%26side%3Dprovider%26timestamp%3D1569321431208
@@ -340,7 +340,7 @@ rest服务验证：
 
 http://169.254.238.92:8888/service/query/tom
 
-![1569321607055](C:\Users\zwz\Documents\dubbo.assets\1569321607055.png)
+![1569321607055](dubbo.assets\1569321607055.png)
 
 
 
@@ -348,7 +348,7 @@ webservice服务验证：
 
 http://169.254.238.92:8080/com.gupao.Iservice?wsdl
 
-![1569424251664](C:\Users\zwz\Documents\dubbo.assets\1569424251664.png)
+![1569424251664](dubbo.assets\1569424251664.png)
 
 
 
@@ -518,9 +518,9 @@ IHelloService helloService;
 
 运行结果：
 
-![1569493895260](C:\Users\zwz\Documents\dubbo.assets\1569493895260.png)
+![1569493895260](dubbo.assets\1569493895260.png)
 
-![1569493906862](C:\Users\zwz\Documents\dubbo.assets\1569493906862.png)
+![1569493906862](dubbo.assets\1569493906862.png)
 
 
 
@@ -546,7 +546,7 @@ public class IHelloServiceImpl implements IHelloService {
 - 方法级>接口级>全局配置
 - 如果级别（方法级别、接口级别、全局）一样，则消费方优先，提供方次之
 
-![1569494298381](C:\Users\zwz\Documents\dubbo.assets\1569494298381.png)
+![1569494298381](dubbo.assets\1569494298381.png)
 
 
 
@@ -608,7 +608,7 @@ public class IHelloServiceMock implements IHelloService{
 
 当出现错误时，此时不是返回错误，还是返回一个指定的兜底数据：
 
-![1569507179071](C:\Users\zwz\Documents\dubbo.assets\1569507179071.png)
+![1569507179071](dubbo.assets\1569507179071.png)
 
 ## 启动时检查
 
@@ -714,7 +714,7 @@ dubbo.config-center.address=zookeeper://119.23.201.241:2181
 
 zookeeper中的实现原理：
 
-![1569587266167](C:\Users\zwz\Documents\dubbo.assets\1569587266167.png)
+![1569587266167](dubbo.assets\1569587266167.png)
 
 
 

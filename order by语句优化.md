@@ -49,7 +49,7 @@ CREATE TABLE `user` (
 
    执行计划：
 
-   ![1570608273712](C:\Users\zwz\Documents\order by语句优化.assets\1570608273712.png)
+   ![1570608273712](order by语句优化.assets\1570608273712.png)
 
    语句二：
 
@@ -59,7 +59,7 @@ CREATE TABLE `user` (
 
    执行计划：
 
-   ![1570608357154](C:\Users\zwz\Documents\order by语句优化.assets\1570608357154.png)
+   ![1570608357154](order by语句优化.assets\1570608357154.png)
 
    语句三：
 
@@ -69,7 +69,7 @@ CREATE TABLE `user` (
 
    执行计划：
 
-   ![1570608390761](C:\Users\zwz\Documents\order by语句优化.assets\1570608390761.png)
+   ![1570608390761](order by语句优化.assets\1570608390761.png)
 
    语句四：
 
@@ -79,7 +79,7 @@ CREATE TABLE `user` (
 
    执行计划：
 
-   ![1570610355915](C:\Users\zwz\Documents\order by语句优化.assets\1570610355915.png)
+   ![1570610355915](order by语句优化.assets\1570610355915.png)
 
    语句五：
 
@@ -89,7 +89,7 @@ CREATE TABLE `user` (
 
    执行计划：
 
-   ![1570610452213](C:\Users\zwz\Documents\order by语句优化.assets\1570610452213.png)
+   ![1570610452213](order by语句优化.assets\1570610452213.png)
 
    > asc desc混合使用，引起filesort
 
@@ -109,7 +109,7 @@ CREATE TABLE `user` (
 
    执行计划：
 
-   ![1570609958318](C:\Users\zwz\Documents\order by语句优化.assets\1570609958318.png)
+   ![1570609958318](order by语句优化.assets\1570609958318.png)
 
    注意这里extra是using index condition而不是using index
 
@@ -124,7 +124,7 @@ CREATE TABLE `user` (
 
    执行计划：
 
-   ![1570610120766](C:\Users\zwz\Documents\order by语句优化.assets\1570610120766.png)
+   ![1570610120766](order by语句优化.assets\1570610120766.png)
 
    > where中的name（需与常量比较）与order by中的age匹配了索引，优化器判定使用索引排序性能高
 
@@ -132,7 +132,7 @@ CREATE TABLE `user` (
    explain select * from user where name='tom' and age>20 order by age;
    ```
 
-   ![1570616254403](C:\Users\zwz\Documents\order by语句优化.assets\1570616254403.png)
+   ![1570616254403](order by语句优化.assets\1570616254403.png)
 
    > 由于index(name,age)中name的条件是常量，即是确定的，所以还是可能会使用索引排序
 
@@ -142,13 +142,13 @@ CREATE TABLE `user` (
    explain select name,age from user where name >'tom' order by name asc;
    ```
 
-   ![1570615865625](C:\Users\zwz\Documents\order by语句优化.assets\1570615865625.png)
+   ![1570615865625](order by语句优化.assets\1570615865625.png)
 
    ```sql
    explain select name,age from user where name <'tom' order by name desc;
    ```
 
-   ![1570615918397](C:\Users\zwz\Documents\order by语句优化.assets\1570615918397.png)
+   ![1570615918397](order by语句优化.assets\1570615918397.png)
 
    > 若使用索引排序性能高则使用
 
@@ -161,7 +161,7 @@ CREATE TABLE `user` (
    explain select name,age from user u order by name,age;
    ```
 
-   ![1570617238041](C:\Users\zwz\Documents\order by语句优化.assets\1570617238041.png)
+   ![1570617238041](order by语句优化.assets\1570617238041.png)
 
 2. order by语句中未有序匹配索引
 
@@ -170,7 +170,7 @@ CREATE TABLE `user` (
    explain select name,age from user order by age,name;
    ```
 
-   ![1570612498315](C:\Users\zwz\Documents\order by语句优化.assets\1570612498315.png)
+   ![1570612498315](order by语句优化.assets\1570612498315.png)
 
    > 这里using index表示使用了覆盖索引
 
@@ -181,7 +181,7 @@ CREATE TABLE `user` (
    explain select name,age from user order by name asc,age desc;
    ```
 
-   ![1570612569727](C:\Users\zwz\Documents\order by语句优化.assets\1570612569727.png)
+   ![1570612569727](order by语句优化.assets\1570612569727.png)
 
    
 
@@ -192,7 +192,7 @@ CREATE TABLE `user` (
    explain select * from user u WHERE name='tom' order by age;
    ```
 
-   ![1570617186993](C:\Users\zwz\Documents\order by语句优化.assets\1570617186993.png)
+   ![1570617186993](order by语句优化.assets\1570617186993.png)
 
 5. order by语句中的字段并非表原有字段，比如做了函数操作
 
@@ -201,14 +201,14 @@ CREATE TABLE `user` (
    explain select name,age from user order by abs(age);
    ```
 
-   ![1570612835978](C:\Users\zwz\Documents\order by语句优化.assets\1570612835978.png)
+   ![1570612835978](order by语句优化.assets\1570612835978.png)
 
    ```sql
    /**索引为user(name,age)*/
    explain select name,age from user order by -age;
    ```
 
-   ![1570612868112](C:\Users\zwz\Documents\order by语句优化.assets\1570612868112.png)
+   ![1570612868112](order by语句优化.assets\1570612868112.png)
 
 6. The query joins many tables, and the columns in the `ORDER BY` are not all from the first nonconstant table that is used to retrieve rows. (This is the first table in the [`EXPLAIN`](https://dev.mysql.com/doc/refman/5.7/en/explain.html) output that does not have a [`const`](https://dev.mysql.com/doc/refman/5.7/en/explain-output.html#jointype_const) join type.)
 
@@ -219,7 +219,7 @@ CREATE TABLE `user` (
    explain select name,age from user group by name,age order by age;
    ```
 
-   ![1570614172035](C:\Users\zwz\Documents\order by语句优化.assets\1570614172035.png)
+   ![1570614172035](order by语句优化.assets\1570614172035.png)
 
    ```sql
    /**索引为user(name,age)*/
@@ -227,7 +227,7 @@ CREATE TABLE `user` (
    explain select name,age from user group by name,age order by name,age;
    ```
 
-   ![1570614247227](C:\Users\zwz\Documents\order by语句优化.assets\1570614247227.png)
+   ![1570614247227](order by语句优化.assets\1570614247227.png)
 
 8. 索引未有序存储行数据，比如， this is true for a `HASH` index in a `MEMORY` table（哈希索引）
 
@@ -238,7 +238,7 @@ CREATE TABLE `user` (
    explain select name,age from user where name like 'to%' order by age;
    ```
 
-   ![1570613655383](C:\Users\zwz\Documents\order by语句优化.assets\1570613655383.png)
+   ![1570613655383](order by语句优化.assets\1570613655383.png)
 
    > 索引不能区分也就是不能确定"to%"中“%”的内容，所以不会使用索引排序
 
@@ -247,7 +247,7 @@ CREATE TABLE `user` (
    explain select name,age from user where name ='tom' order by age;
    ```
 
-   ![1570613815515](C:\Users\zwz\Documents\order by语句优化.assets\1570613815515.png)
+   ![1570613815515](order by语句优化.assets\1570613815515.png)
 
    ```sql
    /**索引为user(name,age)*/
@@ -255,7 +255,7 @@ CREATE TABLE `user` (
    explain select name,age from user group by name,age order by name,age;
    ```
 
-   ![1570614247227](C:\Users\zwz\Documents\order by语句优化.assets\1570614247227.png)
+   ![1570614247227](order by语句优化.assets\1570614247227.png)
 
 10. 字段别名使用的影响
 
@@ -264,7 +264,7 @@ CREATE TABLE `user` (
     explain select name from user order by name;
     ```
 
-    ![1570617499897](C:\Users\zwz\Documents\order by语句优化.assets\1570617499897.png)
+    ![1570617499897](order by语句优化.assets\1570617499897.png)
 
     > 使用filesort
 
@@ -273,7 +273,7 @@ CREATE TABLE `user` (
     explain select ABS(age) as age from user order by age;
     ```
 
-    ![1570617701704](C:\Users\zwz\Documents\order by语句优化.assets\1570617701704.png)
+    ![1570617701704](order by语句优化.assets\1570617701704.png)
 
     > 因为别名影响，order by中age字段对应到了别名age，使用了函数操作的ABS(age)，使用filesort
 
@@ -282,7 +282,7 @@ CREATE TABLE `user` (
     explain select ABS(age) as b from user order by age;
     ```
 
-    ![1570617896792](C:\Users\zwz\Documents\order by语句优化.assets\1570617896792.png)
+    ![1570617896792](order by语句优化.assets\1570617896792.png)
 
     > age并未对应上别名b，正常使用索引
 
@@ -360,7 +360,7 @@ SELECT c1, c2 FROM t1 WHERE c3 = const GROUP BY c1, c2;
 explain select name,age from user where name='tom' group by age;
 ```
 
-![1570628798928](C:\Users\zwz\Documents\order by语句优化.assets\1570628798928.png)
+![1570628798928](order by语句优化.assets\1570628798928.png)
 
 > 最左匹配不是从group by匹配起，extra未显示`Using index for group-by`和`using temporary`，表示是使用了紧密索引扫描
 
@@ -370,7 +370,7 @@ explain select name,age from user where name='tom' group by age;
 explain select height from user group by height;
 ```
 
-![1570628421505](C:\Users\zwz\Documents\order by语句优化.assets\1570628421505.png)
+![1570628421505](order by语句优化.assets\1570628421505.png)
 
 > using temporary就是使用了临时文件去实现分组，避免出现这种情况
 

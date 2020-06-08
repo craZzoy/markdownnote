@@ -225,21 +225,21 @@ public class SampleWebJspApplication extends SpringBootServletInitializer {
 
   - model1结构中，JSP充当了MVC中VC的角色，所有请求通过转发到JSP、业务逻辑也在JSP处理，耦合性很高。提升后的Model1在JSP中也处理Java Bean。
 
-  ![1567049006480](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567049006480.png)
+  ![1567049006480](SpringBoot.assets\1567049006480.png)
 
 - Model2(MVC)
 
   - 分为了三层，各司其职。
 
-    ![1567049157769](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567049157769.png)
+    ![1567049157769](SpringBoot.assets\1567049157769.png)
 
   - Struts Web Mvc
 
-    ![1567049336361](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567049336361.png)
+    ![1567049336361](SpringBoot.assets\1567049336361.png)
 
   - Spring Web MVC
 
-    ![1567049374742](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567049374742.png)
+    ![1567049374742](SpringBoot.assets\1567049374742.png)
 
 
 
@@ -392,7 +392,7 @@ springboot默认打包方式是jar -0（不使用任何zip压缩），所以并�
 
   请求效果：
 
-  ![1567089041831](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567089041831.png)
+  ![1567089041831](SpringBoot.assets\1567089041831.png)
 
   注意看响应头信息，即返回的类型是html类型
 
@@ -493,7 +493,7 @@ public User user(){
 
 自动返回了application/json类型：
 
-![1567170210604](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567170210604.png)
+![1567170210604](SpringBoot.assets\1567170210604.png)
 
 ```java
 package src.controller;
@@ -586,11 +586,11 @@ public class XMLRestController {
 
 此时效果：
 
-![1567171465284](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567171465284.png)
+![1567171465284](SpringBoot.assets\1567171465284.png)
 
 其实JSON数据被处理成了XML格式：
 
-![1567171918145](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567171918145.png)
+![1567171918145](SpringBoot.assets\1567171918145.png)
 
 同样，可通过produces指定返回类型
 
@@ -1414,7 +1414,7 @@ ThreadLocal的运用
 
 注意，如果是idea中module，需配置工作目录$MODULE_DIR$
 
-![1567351361776](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567351361776.png)
+![1567351361776](SpringBoot.assets\1567351361776.png)
 
 
 
@@ -1607,11 +1607,11 @@ Springboot中DispatherServlet作为一个Bean，DispatcherServletAutoConfigurati
 
   新增一个test目录，新建一个default.xml文件：
 
-  ![1567486753262](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567486753262.png)
+  ![1567486753262](SpringBoot.assets\1567486753262.png)
 
   访问<http://localhost:8080/lesson-five/test/>，欢迎页面被加载，资源是静态资源
 
-  ![1567486816607](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1567486816607.png)
+  ![1567486816607](SpringBoot.assets\1567486816607.png)
 
 - 类加载：在原有jdk标准实现中tomcat增加了自己的两个启动类Common ClassLoader和Webapp Classloader，即用户类加载器（tomcat8.5测试结果）。
 
@@ -3751,7 +3751,7 @@ public enum PersistenceContextType {
 3. 游离状态（脱管）：数据库中有，session中不存在
 4. 删除状态：数据库中没有，session缓存中没有
 
-![1568087722049](D:\BaiduNetdiskDownload\markdown笔记\SpringBoot.assets\1568087722049.png)
+![1568087722049](SpringBoot.assets\1568087722049.png)
 
 
 

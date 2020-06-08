@@ -2,7 +2,7 @@
 
 NIO的出现是为了解决传统IO下的局限，它们的区别主要如下：
 
-![1573126519160](C:\Users\zwz\Documents\JAVA IO.assets\1573126519160.png)
+![1573126519160](JAVA IO.assets\1573126519160.png)
 
 - IO
   - 面向流处理

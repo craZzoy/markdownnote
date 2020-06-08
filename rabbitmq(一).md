@@ -39,7 +39,7 @@ rabbitmq时基于erlang开发的，而erlang天生具有分布式特性，所以
 
 ​	普通集群模式下，不同节点之间只会相互同步元数据
 
-![1569225951794](D:\BaiduNetdiskDownload\markdown笔记\rabbitmq(一).assets\1569225951794.png)
+![1569225951794](rabbitmq(一).assets\1569225951794.png)
 
 在其中，队列的内容是不会相互同步的
 
@@ -83,7 +83,7 @@ rabbitmq时基于erlang开发的，而erlang天生具有分布式特性，所以
 
 高可用的集群架构：
 
-![1569227299207](D:\BaiduNetdiskDownload\markdown笔记\rabbitmq(一).assets\1569227299207.png)
+![1569227299207](rabbitmq(一).assets\1569227299207.png)
 
 规划：
 

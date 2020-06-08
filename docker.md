@@ -341,7 +341,7 @@ docker ps -a	查看所有container，包括停止的
 
 ## Image探讨
 
-![1575182591973](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\1575182591973.png)
+![1575182591973](docker.assets\1575182591973.png)
 
 在docker中，container运行在image上（是image的实例），而image是有一层一层的layer组成的，如运行一个jar包，则需要jdk image，而jdk image又需要centos image（一般这个centos image是体积较小的，即功能较少的）
 
@@ -727,7 +727,7 @@ sh install.sh
 
 ## Container探讨
 
-![1575185564918](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\1575185564918.png)
+![1575185564918](docker.assets\1575185564918.png)
 
 container是根据image创建出来的，它是运行在image layer上的一层，而且在Container中，文件系统是可读可写的，而Container以下的layer是只读的
 
@@ -759,7 +759,7 @@ docker run -d --memory 100M --name tomcat1 tomcat
 
 查看docker stats：
 
-![1575186551433](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\1575186551433.png)
+![1575186551433](docker.assets\1575186551433.png)
 
 
 
@@ -789,7 +789,7 @@ scope launch 39.100.39.63
 
 访问4040宿主主机4040端口：
 
-![image-20200526211905553](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200526211905553.png)
+![image-20200526211905553](docker.assets\image-20200526211905553.png)
 
 ```shell
 # 停止scope
@@ -877,7 +877,7 @@ contanier layer可读可写
 
 常规的网络模型分为7层模型和4层模型：
 
-![image-20200531182527494](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200531182527494.png)
+![image-20200531182527494](docker.assets\image-20200531182527494.png)
 
 在网络中，各个物理机器想要通信是通过网卡进行的。
 

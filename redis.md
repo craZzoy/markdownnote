@@ -206,7 +206,7 @@ typedef struct quicklistNode {
 } quicklistNode;
 ```
 
-![1568179257424](D:\BaiduNetdiskDownload\markdown笔记\redis.assets\1568179257424.png)
+![1568179257424](redis.assets\1568179257424.png)
 
 #### 常用命令
 
@@ -225,7 +225,7 @@ typedef struct quicklistNode {
 
 ### Hash类型
 
-![1568185680715](D:\BaiduNetdiskDownload\markdown笔记\redis.assets\1568185680715.png)
+![1568185680715](redis.assets\1568185680715.png)
 
 #### 数据结构
 
@@ -234,7 +234,7 @@ typedef struct quicklistNode {
 - ziplist：数据量小时使用
 - hashTable：分为了三层
 
-![1568188811050](D:\BaiduNetdiskDownload\markdown笔记\redis.assets\1568188811050.png)
+![1568188811050](redis.assets\1568188811050.png)
 
 - dictEntry：管理一个key-value，同时保留同一个桶中相邻元素的指针，用来维护哈希桶的内部链。
 
@@ -326,7 +326,7 @@ zset类型
 - ziplist
 - skiplist+hashtable
 
-![1568191126111](D:\BaiduNetdiskDownload\markdown笔记\redis.assets\1568191126111.png)
+![1568191126111](redis.assets\1568191126111.png)
 
 #### 常用命令
 
@@ -437,7 +437,7 @@ zset类型
 
     当producer1执行publish abc hello命令时，两个client都能收到
 
-  ![1568298240484](D:\BaiduNetdiskDownload\markdown笔记\redis.assets\1568298240484.png)
+  ![1568298240484](redis.assets\1568298240484.png)
 
 
 

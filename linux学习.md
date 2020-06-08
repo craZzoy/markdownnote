@@ -11,7 +11,7 @@ linux可分为以下四部分：
 
 linux系统结构：
 
-![1573728294247](D:\BaiduNetdiskDownload\markdown笔记\linux学习.assets\1573728294247.png)
+![1573728294247](linux学习.assets\1573728294247.png)
 
 
 

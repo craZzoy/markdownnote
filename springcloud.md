@@ -107,7 +107,7 @@ public class ObserverDemo {
 - ApplicationEvent：应用事件，继承了java api中EventObject
 - ApplicationEventListener：应用监听器，继承了Java api中的EventListener
 
-![1569944408650](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\1569944408650.png)
+![1569944408650](springcloud.assets\1569944408650.png)
 
 ```java
 package demo;
@@ -653,7 +653,7 @@ public class ConfigClientStarter {
 
 ### 结合@RefreshScope手动更新配置
 
-![1585143487382](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\1585143487382.png)
+![1585143487382](springcloud.assets\1585143487382.png)
 
 代码示例见ch11-1config-client、ch11-1config-server
 
@@ -661,7 +661,7 @@ public class ConfigClientStarter {
 
 ### 结合Spring Cloud Bus热刷新
 
-![1585451146326](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\1585451146326.png)
+![1585451146326](springcloud.assets\1585451146326.png)
 
 代码示例见ch11-3-config-client-bus、ch11-3-config-server-bus
 
@@ -1907,7 +1907,7 @@ org.springframework.boot.context.config.ConfigFileApplicationListener
 - 中心化：服务注册到单个节点中，服务的注册与发现通过其实现
 - 去中心化：每个节点都是注册中心
 
-![1570193856565](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\1570193856565.png)
+![1570193856565](springcloud.assets\1570193856565.png)
 
 
 
@@ -1980,7 +1980,7 @@ public class EurekaServerStarter {
 
 常用API：
 
-![1583742775894](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\1583742775894.png)
+![1583742775894](springcloud.assets\1583742775894.png)
 
 - 列出所有服务信息（一个服务只一个应用）
 
@@ -2009,7 +2009,7 @@ eureka缺点：
 
 - 随机端口时并不会显示真正的端口
 
-  ![1570151324898](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\1570151324898.png)
+  ![1570151324898](springcloud.assets\1570151324898.png)
 
 - 注册列表达到5w时页面受不了
 
@@ -2205,9 +2205,9 @@ public class EurekaClientBootstrap {
 
 - 查看不同zone下的client env：
 
-![1586163783575](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\1586163783575.png)
+![1586163783575](springcloud.assets\1586163783575.png)
 
-![1586163768133](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\1586163768133.png)
+![1586163768133](springcloud.assets\1586163768133.png)
 
 - 通过测试gateway的client/actuator/env，访问的是client的/actuator/env接口，可以看出ZoneAffinity特性，即优先请求同个zone下的client。
 
@@ -2850,7 +2850,7 @@ public @interface EnableFeignClients {
 
 应用方面：动态路由、监控、弹性、服务治理、编排、安全。zuul可以简单看成应用的前置处理器：
 
-![1586173862973](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\1586173862973.png)
+![1586173862973](springcloud.assets\1586173862973.png)
 
 其具备以下功能：
 
@@ -2863,4 +2863,4 @@ public @interface EnableFeignClients {
 
 入门示例：ch7-2-zuul-server，ch7-2-client-a，eureka-server-demo
 
-![1589380298240](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\1589380298240.png)
+![1589380298240](springcloud.assets\1589380298240.png)

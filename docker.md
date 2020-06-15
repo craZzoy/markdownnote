@@ -1051,6 +1051,419 @@ PERSISTENT_DHCLIENT="yes"
 
 ## Network Namespace
 
+linux中，网络的隔离是通过network namespace来管理的。
+
+常用命令：
+
+```shell
+ip netns list  #查看
+ip netns add nsl #增加
+ip netns delete nsl #删除
+```
+
+### 示例
+
+```shell
+#1、增加network namespace ns1
+[root@localhost ~]# ip netns add ns1
+[root@localhost ~]# ip netns list
+ns1
+#此时网卡lo状态是DOWN
+[root@localhost ~]# ip netns exec ns1 ip a
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+#启动网卡lo
+[root@localhost ~]# ip netns exec ns1 ifup lo
+#此时网卡lo状态是UNKNOW
+[root@localhost ~]# ip netns exec ns1 ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+#2、再增加一个network namespace ns2
+[root@localhost ~]# ip netns add ns2
+[root@localhost ~]# ip netns list
+ns2
+ns1
+```
+
+经过前面步骤，此时两个namespace是互相隔离的：
+
+![image-20200608223223754](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200608223223754.png)
+
+要想让两个namespace网络连通起来，可以使用veth pair技术：Virtual Ethernet Pair，是一个成对的端口，可以实现上述功能
+
+![image-20200608223506681](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200608223506681.png)
+
+```shell
+# 3、创建一对link，也就是接下来要通过veth pair连接的link
+[root@localhost ~]# ip link add veth-ns1 type veth peer name veth-ns2
+[root@localhost ~]# ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/ether 52:54:00:8a:fe:e6 brd ff:ff:ff:ff:ff:ff
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/ether 08:00:27:60:46:64 brd ff:ff:ff:ff:ff:ff
+4: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN mode DEFAULT group default 
+    link/ether 02:42:82:6d:05:e2 brd ff:ff:ff:ff:ff:ff
+5: veth-ns2@veth-ns1: <BROADCAST,MULTICAST,M-DOWN> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether ea:de:11:a2:21:f6 brd ff:ff:ff:ff:ff:ff
+6: veth-ns1@veth-ns2: <BROADCAST,MULTICAST,M-DOWN> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 8a:9e:9a:90:7d:3a brd ff:ff:ff:ff:ff:ff
+# 4、将veth-ns1加入ns1中，veth-ns2加入ns2中
+[root@localhost ~]# ip link set veth-ns1 netns ns1
+[root@localhost ~]# ip link set veth-ns2 netns ns2
+[root@localhost ~]# ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/ether 52:54:00:8a:fe:e6 brd ff:ff:ff:ff:ff:ff
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/ether 08:00:27:60:46:64 brd ff:ff:ff:ff:ff:ff
+4: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN mode DEFAULT group default 
+    link/ether 02:42:82:6d:05:e2 brd ff:ff:ff:ff:ff:ff
+# 5、查看两个link已经成功加入ns1和ns2中
+[root@localhost ~]# ip netns exec ns1 ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+6: veth-ns1@if5: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 8a:9e:9a:90:7d:3a brd ff:ff:ff:ff:ff:ff link-netnsid 1
+[root@localhost ~]# ip netns exec ns2 ip link
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+5: veth-ns2@if6: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether ea:de:11:a2:21:f6 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+# 6、给veth-ns1和veth-ns2增加IP地址
+[root@localhost ~]# ip netns exec ns1 ip addr add 192.168.0.11/24 dev veth-ns1
+[root@localhost ~]# ip netns exec ns2 ip addr add 192.168.0.12/24 dev veth-ns2
+[root@localhost ~]# ip netns exec ns2 ip link
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+5: veth-ns2@if6: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether ea:de:11:a2:21:f6 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+[root@localhost ~]# ip netns exec ns1 ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+6: veth-ns1@if5: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 8a:9e:9a:90:7d:3a brd ff:ff:ff:ff:ff:ff link-netnsid 1
+[root@localhost ~]# ip netns exec ns1 ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+6: veth-ns1@if5: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN group default qlen 1000
+    link/ether 8a:9e:9a:90:7d:3a brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet 192.168.0.11/24 scope global veth-ns1
+       valid_lft forever preferred_lft forever
+[root@localhost ~]# ip netns exec ns2 ip a
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+5: veth-ns2@if6: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN group default qlen 1000
+    link/ether ea:de:11:a2:21:f6 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.0.12/24 scope global veth-ns2
+       valid_lft forever preferred_lft forever
+# 7、启动（网卡）veth-ns1和veth-ns2
+[root@localhost ~]# ip netns exec ns1 ip link set veth-ns1 up
+[root@localhost ~]# ip netns exec ns2 ip link set veth-ns2 up
+[root@localhost ~]# ip netns exec ns2 ip a
+1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+5: veth-ns2@if6: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether ea:de:11:a2:21:f6 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.0.12/24 scope global veth-ns2
+       valid_lft forever preferred_lft forever
+    inet6 fe80::e8de:11ff:fea2:21f6/64 scope link 
+       valid_lft forever preferred_lft forever
+[root@localhost ~]# ip netns exec ns1 ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+6: veth-ns1@if5: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 8a:9e:9a:90:7d:3a brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet 192.168.0.11/24 scope global veth-ns1
+       valid_lft forever preferred_lft forever
+    inet6 fe80::889e:9aff:fe90:7d3a/64 scope link 
+       valid_lft forever preferred_lft forever
+# 8、测试发现两个不同network namespace的网卡可以ping通
+[root@localhost ~]# ip netns ns1 ping 192.168.0.12
+Command "ns1" is unknown, try "ip netns help".
+[root@localhost ~]# ip netns exec ns1 ping 192.168.0.12
+PING 192.168.0.12 (192.168.0.12) 56(84) bytes of data.
+64 bytes from 192.168.0.12: icmp_seq=1 ttl=64 time=0.048 ms
+64 bytes from 192.168.0.12: icmp_seq=2 ttl=64 time=0.036 ms
+64 bytes from 192.168.0.12: icmp_seq=3 ttl=64 time=0.039 ms
+64 bytes from 192.168.0.12: icmp_seq=4 ttl=64 time=0.036 ms
+64 bytes from 192.168.0.12: icmp_seq=5 ttl=64 time=0.036 ms
+64 bytes from 192.168.0.12: icmp_seq=6 ttl=64 time=0.066 ms
+64 bytes from 192.168.0.12: icmp_seq=7 ttl=64 time=0.034 ms
+^C
+--- 192.168.0.12 ping statistics ---
+7 packets transmitted, 7 received, 0% packet loss, time 5999ms
+rtt min/avg/max/mdev = 0.034/0.042/0.066/0.011 ms
+[root@localhost ~]# ip netns exec ns2 ping 192.168.0.11
+PING 192.168.0.11 (192.168.0.11) 56(84) bytes of data.
+64 bytes from 192.168.0.11: icmp_seq=1 ttl=64 time=0.036 ms
+64 bytes from 192.168.0.11: icmp_seq=2 ttl=64 time=0.038 ms
+64 bytes from 192.168.0.11: icmp_seq=3 ttl=64 time=0.066 ms
+64 bytes from 192.168.0.11: icmp_seq=4 ttl=64 time=0.036 ms
+64 bytes from 192.168.0.11: icmp_seq=5 ttl=64 time=0.104 ms
+64 bytes from 192.168.0.11: icmp_seq=6 ttl=64 time=0.038 ms
+64 bytes from 192.168.0.11: icmp_seq=7 ttl=64 time=0.037 ms
+^C
+--- 192.168.0.11 ping statistics ---
+7 packets transmitted, 7 received, 0% packet loss, time 5999ms
+rtt min/avg/max/mdev = 0.036/0.050/0.104/0.025 ms
+```
+
+
+
+### 发散
+
+试问，当不创建veth pair对时，分别在两个network namespace中创建一个网卡，分别设置相同网段的IP地址，此时两个网卡之间能互相Ping通吗？
+
+
+
+### Container中的namespace
+
+实际上每个container都会有自己的network namespace，并且是独立的，创建两个容器验证下：
+
+```shell
+# 创建container
+[root@localhost ~]# docker run -d --name tomcat01 -p 8081:8080 tomcat
+1817dd489e8f2340bb11457467a02ee76adb52af9cc66aa65d75a56c6cf3479e
+[root@localhost ~]# docker run -d --name tomcat02 -p 8082:8080 tomcat
+a3e7c2efc67c9a6617051745a2d3c18401188ab3bb810b4dfc44e46d1ebbf734
+[root@localhost ~]# docker exec -it tomcat01 ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+7: eth0@if8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+[root@localhost ~]# docker exec -it tomcat02 ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+9: eth0@if10: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:ac:11:00:03 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.17.0.3/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+[root@localhost ~]# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 52:54:00:8a:fe:e6 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.2.15/24 brd 10.0.2.255 scope global noprefixroute dynamic eth0
+       valid_lft 78671sec preferred_lft 78671sec
+    inet6 fe80::5054:ff:fe8a:fee6/64 scope link 
+       valid_lft forever preferred_lft forever
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 08:00:27:60:46:64 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.105/24 brd 192.168.1.255 scope global noprefixroute dynamic eth1
+       valid_lft 4336sec preferred_lft 4336sec
+    inet6 fe80::a00:27ff:fe60:4664/64 scope link 
+       valid_lft forever preferred_lft forever
+4: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:82:6d:05:e2 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:82ff:fe6d:5e2/64 scope link 
+       valid_lft forever preferred_lft forever
+8: veth9a05b2d@if7: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether 4a:38:d7:49:58:93 brd ff:ff:ff:ff:ff:ff link-netnsid 2
+    inet6 fe80::4838:d7ff:fe49:5893/64 scope link 
+       valid_lft forever preferred_lft forever
+10: vethb4dbc46@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether 36:e5:2f:4b:7b:1e brd ff:ff:ff:ff:ff:ff link-netnsid 3
+    inet6 fe80::34e5:2fff:fe4b:7b1e/64 scope link 
+       valid_lft forever preferred_lft forever
+# tomcat01容器网络和tomcat02容器网络能够互相ping通
+[root@localhost ~]# docker exec -it tomcat01 ping 172.17.0.3
+PING 172.17.0.3 (172.17.0.3) 56(84) bytes of data.
+64 bytes from 172.17.0.3: icmp_seq=1 ttl=64 time=0.091 ms
+64 bytes from 172.17.0.3: icmp_seq=2 ttl=64 time=0.085 ms
+64 bytes from 172.17.0.3: icmp_seq=3 ttl=64 time=0.049 ms
+64 bytes from 172.17.0.3: icmp_seq=4 ttl=64 time=0.116 ms
+^C
+--- 172.17.0.3 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 2999ms
+rtt min/avg/max/mdev = 0.049/0.085/0.116/0.024 ms
+
+```
+
+
+
+
+
+## 深入container网络-Bridge
+
+1. centos中网络：ip 查看
+
+   ```shell
+   4: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+       link/ether 02:42:82:6d:05:e2 brd ff:ff:ff:ff:ff:ff
+       inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+          valid_lft forever preferred_lft forever
+       inet6 fe80::42:82ff:fe6d:5e2/64 scope link 
+          valid_lft forever preferred_lft forever
+   8: veth9a05b2d@if7: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+       link/ether 4a:38:d7:49:58:93 brd ff:ff:ff:ff:ff:ff link-netnsid 2
+       inet6 fe80::4838:d7ff:fe49:5893/64 scope link 
+          valid_lft forever preferred_lft forever
+   10: vethb4dbc46@if9: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+       link/ether 36:e5:2f:4b:7b:1e brd ff:ff:ff:ff:ff:ff link-netnsid 3
+       inet6 fe80::34e5:2fff:fe4b:7b1e/64 scope link 
+          valid_lft forever preferred_lft forever
+   ```
+
+2. tomcat01容器中网络：
+
+   ```shell
+   [root@localhost ~]# docker exec -it tomcat01 ip a
+   1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+       link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+       inet 127.0.0.1/8 scope host lo
+          valid_lft forever preferred_lft forever
+   7: eth0@if8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+       link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+       inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+          valid_lft forever preferred_lft forever
+   ```
+
+3. centos中能ping通tomcat01网络
+
+   ```shell
+   [root@localhost ~]# ping 172.17.0.2
+   PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+   64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.062 ms
+   64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.067 ms
+   64 bytes from 172.17.0.2: icmp_seq=3 ttl=64 time=0.055 ms
+   64 bytes from 172.17.0.2: icmp_seq=4 ttl=64 time=0.045 ms
+   64 bytes from 172.17.0.2: icmp_seq=5 ttl=64 time=0.080 ms
+   ```
+
+   ```shell
+   [root@localhost ~]# docker exec -it tomcat02 ip a
+   1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+       link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+       inet 127.0.0.1/8 scope host lo
+          valid_lft forever preferred_lft forever
+   9: eth0@if10: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+       link/ether 02:42:ac:11:00:03 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+       inet 172.17.0.3/16 brd 172.17.255.255 scope global eth0
+          valid_lft forever preferred_lft forever
+   ```
+
+   centos和tomcat01容器属于不同的network namespace，为什么能ping通，通过前面学习，可猜想：
+
+   ![image-20200611220929010](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200611220929010.png)
+
+   
+
+4. 也就是说，在tomcat01中有一个eth0和centos的docker0中有一个veth是成对的，类似于之前的Veth-ns1和Veth-ns2，整体情况如下如所示：
+
+   ![image-20200611221607163](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200611221607163.png)
+
+5. 通过brctl验证下：
+
+   ```shell
+   # 安装一下
+   yum install bridge-utils
+   [root@localhost ~]# brctl show
+   bridge name	bridge id		STP enabled	interfaces
+   docker0		8000.0242826d05e2	no		veth9a05b2d
+   							vethb4dbc46
+   ```
+
+   这种网络方式称为Bridge，bridge是docker中默认的网络模式
+
+   ```shell
+   [root@localhost ~]# docker network ls
+   NETWORK ID          NAME                DRIVER              SCOPE
+   58a139ca675d        bridge              bridge              local
+   fd25cadbb12b        host                host                local
+   67a67852fa40        none                null                local
+   ```
+
+6. 检查下bridge：docker network inspect bridge
+
+   ```shell
+   [root@localhost ~]# docker network inspect bridge
+   [
+       {
+           "Name": "bridge",
+           "Id": "58a139ca675d6d09a229d5748c693a8ce99f9fe9e95d38a15fa619d27a94b48a",
+           "Created": "2020-06-08T13:50:36.878084777Z",
+           "Scope": "local",
+           "Driver": "bridge",
+           "EnableIPv6": false,
+           "IPAM": {
+               "Driver": "default",
+               "Options": null,
+               "Config": [
+                   {
+                       "Subnet": "172.17.0.0/16",
+                       "Gateway": "172.17.0.1"
+                   }
+               ]
+           },
+           "Internal": false,
+           "Attachable": false,
+           "Ingress": false,
+           "ConfigFrom": {
+               "Network": ""
+           },
+           "ConfigOnly": false,
+           "Containers": {
+               "1817dd489e8f2340bb11457467a02ee76adb52af9cc66aa65d75a56c6cf3479e": {
+                   "Name": "tomcat01",
+                   "EndpointID": "2c6d2be8afb9786c3f5981aab08d678f781f4d74a89c76b3840c4c7b71a265b5",
+                   "MacAddress": "02:42:ac:11:00:02",
+                   "IPv4Address": "172.17.0.2/16",
+                   "IPv6Address": ""
+               },
+               "a3e7c2efc67c9a6617051745a2d3c18401188ab3bb810b4dfc44e46d1ebbf734": {
+                   "Name": "tomcat02",
+                   "EndpointID": "a05e6aac2a2d2e83bbaf1261777af417a55a407852ea406ca4fe1e251339510d",
+                   "MacAddress": "02:42:ac:11:00:03",
+                   "IPv4Address": "172.17.0.3/16",
+                   "IPv6Address": ""
+               }
+           },
+           "Options": {
+               "com.docker.network.bridge.default_bridge": "true",
+               "com.docker.network.bridge.enable_icc": "true",
+               "com.docker.network.bridge.enable_ip_masquerade": "true",
+               "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+               "com.docker.network.bridge.name": "docker0",
+               "com.docker.network.driver.mtu": "1500"
+           },
+           "Labels": {}
+       }
+   ]
+   ```
+
+7. tomcat01是可以访问互联网的，NAT是通过iptable实现的：
+
+   ![image-20200611223020504](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200611223020504.png)
+
+
+
 
 
 

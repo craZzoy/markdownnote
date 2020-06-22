@@ -3935,7 +3935,39 @@ public class CountTask extends RecursiveTask<Long>{
 
 
 
-# JDK并发容器
+## JDK并发容器
+
+### 并发List
+
+ArrayList和Vector都是线程安全的数据实现，但Vector是线程安全的。
+
+- CopyOnWriteArrayList：适用于读多写少场景的List
+- ConcurrentLinkedQueue：高效的并发队列，使用链表实现。可以看做一个线程安全的LinkedList
+
+
+
+### 并发Map
+
+- ConcurrentHashMap：高效并发的HashMap
+- ConcurrentSkipListMap：跳表数据结构的map
+
+
+
+
+
+### BlockingQueue
+
+阻塞队列，使用作为数据共享的通道
+
+
+
+123页
+
+
+
+
+
+# 锁的优化及注意事项
 
 
 

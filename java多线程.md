@@ -1920,7 +1920,7 @@ public interface Condition {
 
 - await：类似wait()
   - 使当前线程等待，同时释放锁
-  - 响应其他线程的signal后者signalAll重新获得锁执行
+  - 响应其他线程的signal，后者signalAll重新获得锁执行
   - 线程中断时跳出等待
 - awaitUninterruptibly：与await类似，但等待过程中不会响应中断
 - signal：类似notify，唤醒一个等待的线程
@@ -3935,9 +3935,77 @@ public class CountTask extends RecursiveTask<Long>{
 
 
 
-# JDK并发容器
+## JDK并发容器
+
+### 并发List
+
+ArrayList和Vector都是线程安全的数据实现，但Vector是线程安全的。
+
+- CopyOnWriteArrayList：适用于读多写少场景的List
+- ConcurrentLinkedQueue：高效的并发队列，使用链表实现。可以看做一个线程安全的LinkedList
 
 
+
+### 并发Map
+
+- ConcurrentHashMap：高效并发的HashMap
+- ConcurrentSkipListMap：跳表数据结构的map
+
+
+
+
+
+### BlockingQueue
+
+阻塞队列，使用作为数据共享的通道
+
+
+
+123页
+
+
+
+
+
+# 锁的优化及注意事项
+
+## 提高锁性能的几点建议
+
+1. 减少锁持有时间：如下三个方法中，若只有`mutextMethod`方法需要加锁，这样做增加了锁持有的时间，降低了系统的吞吐量
+
+   ```java
+   public synchronized void synMethod(){
+   	othercode1();
+   	mutextMethod();
+   	othercode2();
+   }
+   ```
+
+2. 减小锁粒度：指缩小锁定的范围，从而减少锁冲突的可能性，进而提高系统的并发能力。如`concurrentHashMap`的put方法中就使用道这种方式，如默认16个分段，插入时候每次只在对应分段中加锁
+
+3. 读写分离锁来替换独占锁
+
+4. 锁分离：根据不同的功能使用不同的锁，而非使用同一个。如`LinkedBlockingQueue`类put和take实现，take()从头部取数据，put()从尾部插数据，两者是互不影响的，所以可以使用不同的锁。
+
+   `LinkedBlockingQueue`（1.8）中有两把锁
+
+   ```java
+       /** Lock held by take, poll, etc */
+       private final ReentrantLock takeLock = new ReentrantLock();
+   
+       /** Wait queue for waiting takes */
+       private final Condition notEmpty = takeLock.newCondition();
+   
+       /** Lock held by put, offer, etc */
+       private final ReentrantLock putLock = new ReentrantLock();
+   
+       /** Wait queue for waiting puts */
+       private final Condition notFull = putLock.newCondition();
+   ```
+
+   
+
+5. 锁粗化
 
 
 

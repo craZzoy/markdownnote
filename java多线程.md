@@ -4003,9 +4003,162 @@ ArrayList和Vector都是线程安全的数据实现，但Vector是线程安全�
        private final Condition notFull = putLock.newCondition();
    ```
 
-   
+   ```java
+       public E take() throws InterruptedException {
+           E x;
+           int c = -1;
+           final AtomicInteger count = this.count;
+           final ReentrantLock takeLock = this.takeLock;
+           takeLock.lockInterruptibly(); //加take锁
+           try {
+               while (count.get() == 0) {
+                   notEmpty.await(); //等待插入操作的通知
+               }
+               x = dequeue();
+               c = count.getAndDecrement();
+               if (c > 1)
+                   notEmpty.signal(); //通知可以take
+           } finally {
+               takeLock.unlock();
+           }
+           if (c == capacity)
+               signalNotFull(); // 通知可以插入
+           return x;
+       }
+   ```
 
-5. 锁粗化
+   ```java
+       /**
+        * Inserts the specified element at the tail of this queue, waiting if
+        * necessary for space to become available.
+        *
+        * @throws InterruptedException {@inheritDoc}
+        * @throws NullPointerException {@inheritDoc}
+        */
+       public void put(E e) throws InterruptedException {
+           if (e == null) throw new NullPointerException();
+           // Note: convention in all put/take/etc is to preset local var
+           // holding count negative to indicate failure unless set.
+           int c = -1;
+           Node<E> node = new Node<E>(e);
+           final ReentrantLock putLock = this.putLock;
+           final AtomicInteger count = this.count;
+           putLock.lockInterruptibly();
+           try {
+               /*
+                * Note that count is used in wait guard even though it is
+                * not protected by lock. This works because count can
+                * only decrease at this point (all other puts are shut
+                * out by lock), and we (or some other waiting put) are
+                * signalled if it ever changes from capacity. Similarly
+                * for all other uses of count in other wait guards.
+                */
+               while (count.get() == capacity) { //队列满了，插入动作阻塞
+                   notFull.await();
+               }
+               enqueue(node);
+               c = count.getAndIncrement();
+               if (c + 1 < capacity)
+                   notFull.signal(); // 通知可以插入
+           } finally {
+               putLock.unlock();
+           }
+           if (c == 0)
+               signalNotEmpty();  //不为空，可以取数据
+       }
+   ```
+
+   > 通过`takeLock`和`putLock`两个锁，`LinkedBlockingQueue`实现了读写分离。
+
+5. 锁粗化：指多次的加锁操作合并为一次或更少的加锁操作，可能会扩大锁的范围，如
+
+   ```java
+   public void demoMethod(){
+       synchronized(lock){
+           //do something
+       }
+       //其他不需要加锁的操作，很快能执行完
+       synchronized(lock){
+           //do something
+       }
+   }
+   ```
+
+   会被整合为：
+
+   ```java
+   public void demoMethod(){
+       synchronized(lock){
+           //do something
+           //其他不需要加锁的操作，很快能执行完
+       }
+   }
+   ```
+
+   又例如：
+
+   ```java
+   for(int i = 0; i < CIRCLE; i++){
+       synchronized(lock){
+           
+       }
+   }
+   ```
+
+   会被整合为：
+
+   ```java
+   synchronized(lock){
+       for(int i = 0; i < CIRCLE; i++){
+   
+       }
+   }
+   ```
+
+   > 注意，锁粗化的思想和减少锁持有的时间是相反的，应该根据实际情况权衡。
+
+
+
+## `JDK`中对锁的优化
+
+- 锁偏向：如果一个线程获得了一个锁，那么锁就进入了偏向模式，则下一次同个线程获得锁时不需要再做同步操作。这种锁只适用于锁竞争（多线程竞争）不强烈的情况。JVM开启参数：
+
+  - `-XX:+UseBiasedLocking`
+
+- 轻量级锁
+
+- 自旋锁
+
+- 锁消除：只JVM虚拟机在JIT编译时，通过上下文的扫描，去除不可能存在共享资源竞争的锁资源。如下面代码：
+
+  ```java
+  public String[] createStrings(){
+      Vector<String> v = new Vector<String>();
+      for(int i = 0; i < 100; i++){
+          v.add(Integer.toString(i));
+      }
+      return v.toArray(new String[]{});
+  }
+  ```
+
+  由于v变量是局部变量，只有当前线程才能访问到它，其他线程不行，而Vector默认是加锁同步的，这种情况可以认为是没必要的。
+
+  锁消除涉及的一项关键技术为逃逸分析，即判断一个变量是否能够逃出某个作用域，上述代码中v变量显然没逃出`createStrings()`方法作用域。若方法返回v本身，则v可能会被其他线程访问，这样虚拟机就不会进行锁消除的操作。
+
+  逃逸分析必须在-server模式下进行，相关`JVM`参数：
+
+  - `-XX:+DoEscapeAnalysis`：打开逃逸分析
+  - `-XX:+EliminateLocks`：打开锁消除
+
+
+
+## `ThreadLocal`
+
+
+
+
+
+
 
 
 

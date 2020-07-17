@@ -1091,11 +1091,11 @@ ns1
 
 经过前面步骤，此时两个namespace是互相隔离的：
 
-![image-20200608223223754](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200608223223754.png)
+![image-20200608223223754](docker.assets\image-20200608223223754.png)
 
 要想让两个namespace网络连通起来，可以使用veth pair技术：Virtual Ethernet Pair，是一个成对的端口，可以实现上述功能
 
-![image-20200608223506681](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200608223506681.png)
+![image-20200608223506681](docker.assets\image-20200608223506681.png)
 
 ```shell
 # 3、创建一对link，也就是接下来要通过veth pair连接的link
@@ -1371,13 +1371,13 @@ rtt min/avg/max/mdev = 0.049/0.085/0.116/0.024 ms
 
    centos和tomcat01容器属于不同的network namespace，为什么能ping通，通过前面学习，可猜想：
 
-   ![image-20200611220929010](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200611220929010.png)
+   ![image-20200611220929010](docker.assets\image-20200611220929010.png)
 
    
 
 4. 也就是说，在tomcat01中有一个eth0和centos的docker0中有一个veth是成对的，类似于之前的Veth-ns1和Veth-ns2，整体情况如下如所示：
 
-   ![image-20200611221607163](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200611221607163.png)
+   ![image-20200611221607163](docker.assets\image-20200611221607163.png)
 
 5. 通过brctl验证下：
 
@@ -1460,7 +1460,7 @@ rtt min/avg/max/mdev = 0.049/0.085/0.116/0.024 ms
 
 7. tomcat01是可以访问互联网的，NAT是通过iptable实现的：
 
-   ![image-20200611223020504](D:\BaiduNetdiskDownload\markdown笔记\docker.assets\image-20200611223020504.png)
+   ![image-20200611223020504](docker.assets\image-20200611223020504.png)
 
 
 

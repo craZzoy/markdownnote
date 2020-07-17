@@ -3402,7 +3402,7 @@ public interface RejectedExecutionHandler {
       }
   ```
 
-自定义线程池和拒绝策略示例：
+#### 自定义线程池和拒绝策略示例：
 
 ```java
 package com.threadpool;
@@ -4183,6 +4183,604 @@ ArrayList和Vector都是线程安全的数据实现，但Vector是线程安全�
 
 
 ## 生产者-消费者模式
+
+
+
+## Future模式
+
+传统串行程序调用流程：
+
+![image-20200703094715047](java多线程.assets/image-20200703094715047.png)
+
+Futrue模式流程图：
+
+![image-20200703094909465](java多线程.assets/image-20200703094909465.png)
+
+### 简单实现
+
+主要对象：
+
+| 参与者     | 作用                                                   |
+| ---------- | ------------------------------------------------------ |
+| Main       | 调用Client发送请求                                     |
+| Client     | 处理请求时立即返回FutureData，另开一个线程构造RealData |
+| Data       | 数据                                                   |
+| FutureData | 虚拟数据                                               |
+| RealData   | 真实数据                                               |
+
+模式结构图：
+
+![image-20200703103238311](java多线程.assets/image-20200703103238311.png)
+
+data接口：
+
+```java
+public interface Data {
+    public String getResult();
+}
+```
+
+RealData：
+
+```java
+package com.concurrent.pattern.future;
+
+import java.util.Random;
+
+/**
+ * @Description: 真实数据
+ * @Date : 9:54 2020/7/3
+ */
+public class RealData implements Data{
+
+    protected final String result;
+
+    public RealData(String result) {
+        //模拟构造数据很慢的过程
+        Random random  = new Random();
+        int size = random.nextInt() % 10;
+        StringBuffer buffer = new StringBuffer();
+        for (int i = 0; i < size; i++) {
+            buffer.append(result);
+        }
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        this.result = buffer.toString();
+    }
+
+    @Override
+    public String getResult() {
+        return result;
+    }
+}
+
+```
+
+FutureData:
+
+```java
+package com.concurrent.pattern.future;
+
+/**
+ * @Description: realData代理，可快速返回的虚拟数据
+ * @Date : 9:53 2020/7/3
+ */
+public class FutureData implements Data{
+    protected RealData realData = null;
+    protected Boolean isReady = false;
+
+    public synchronized void setRealData(RealData realData){
+        if(isReady){
+            return;
+        }
+        this.realData = realData;
+        isReady = true;
+        //通知可以取数据
+        notifyAll();
+    }
+
+
+    @Override
+    public synchronized String getResult(){
+        while (!isReady) {
+            try {
+                //等待数据
+                wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        return realData.result;
+    }
+
+}
+
+```
+
+Client:
+
+```java
+package com.concurrent.pattern.future;
+
+/**
+ * @Description: 客户端
+ * @Date : 10:18 2020/7/3
+ */
+public class Client {
+
+    public Data request(final String queryStr){
+        FutureData futureData = new FutureData();
+        new Thread(()->{
+            //单独的线程中获取真是数据
+            RealData realData = new RealData(queryStr);
+            futureData.setRealData(realData);
+        }).start();
+        return futureData;
+    }
+}
+
+```
+
+Main:
+
+```java
+package com.concurrent.pattern.future;
+
+public class FutureMain {
+    public static void main(String[] args) throws InterruptedException {
+        Client client = new Client();
+        Data data = client.request("name");
+        System.out.println("请求完毕");
+        //Thread.sleep(2000);
+        //获取真实数据
+        System.out.println("真实数据：" + data.getResult());
+    }
+}
+```
+
+
+
+### JDK中Future实现
+
+
+
+## 并行流水线
+
+如并行计算(B+C)*C/2
+
+```java
+package com.concurrent.pattern.parallelassemblyline;
+
+/**
+ * @Description: 信息载体
+ * @Date : 11:05 2020/7/3
+ */
+public class Msg {
+    public Integer i;
+    public Integer j;
+    public String orgStr = null;
+}
+```
+
+计算B+C：
+
+```java
+package com.concurrent.pattern.parallelassemblyline;
+
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+/**
+ * @Description: 加法计算
+ * @Date : 11:07 2020/7/3
+ */
+public class Plus implements Runnable{
+
+    public static BlockingQueue<Msg> bq = new LinkedBlockingQueue<>();
+
+    @Override
+    public void run() {
+        while (true) {
+            try {
+                Msg msg = bq.take();
+                msg.j = msg.i + msg.j;
+                Multiply.bq.add(msg);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+```
+
+计算(B+C)*C：
+
+```java
+package com.concurrent.pattern.parallelassemblyline;
+
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+/**
+ * @Description: 乘法计算
+ * @Date : 11:07 2020/7/3
+ */
+public class Multiply implements Runnable{
+
+    public static BlockingQueue<Msg> bq = new LinkedBlockingQueue<>();
+
+    @Override
+    public void run() {
+        while (true) {
+            try {
+                Msg msg = bq.take();
+                msg.i = msg.i * msg.j;
+                Div.bq.add(msg);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+}
+
+```
+
+计算(B+C)*C/2：
+
+```java
+package com.concurrent.pattern.parallelassemblyline;
+
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
+/**
+ * @Description: 除法计算
+ * @Date : 11:07 2020/7/3
+ */
+public class Div implements Runnable{
+
+    public static BlockingQueue<Msg> bq = new LinkedBlockingQueue<>();
+
+    @Override
+    public void run() {
+        while (true) {
+            try {
+                Msg msg = bq.take();
+                msg.i = msg.i / 2;
+                System.out.println(msg.orgStr + "=" + msg.i);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+```
+
+执行类：
+
+```java
+package com.concurrent.pattern.parallelassemblyline;
+
+/**
+ * @Description: 执行类
+ * @Date : 11:21 2020/7/3
+ */
+public class PStreamMain {
+    public static void main(String[] args) {
+        new Thread(new Plus()).start();
+        new Thread(new Multiply()).start();
+        new Thread(new Div()).start();
+        for (int i = 0; i < 1000; i++) {
+            for (int j = 0; j < 1000; j++) {
+                Msg msg = new Msg();
+                msg.i = i;
+                msg.j = j;
+                msg.orgStr = "((" + i + "+" + j + ")*" + i + ")/2";
+                Plus.bq.add(msg);
+            }
+        }
+    }
+}
+
+```
+
+
+
+## 并行搜索
+
+
+
+## 并行排序
+
+Arrays.parellelSort
+
+
+
+# Java8中并发相关
+
+## 增强的Future：CompletableFuture
+
+### 手动设置完成状态
+
+```java
+package com.relatedtojava8;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+/**
+ * @Description: 计算
+ * @Date : 16:36 2020/7/6
+ */
+public class AskThread implements Runnable{
+
+    CompletableFuture<Integer> cf = null;
+
+    public AskThread(CompletableFuture<Integer> cf) {
+        this.cf = cf;
+    }
+
+    @Override
+    public void run() {
+        try {
+            System.out.println(cf.get() * cf.get());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        final CompletableFuture<Integer> future = new CompletableFuture<>();
+        new Thread(new AskThread(future)).start();
+        //模拟future的耗时计算
+        Thread.sleep(2000);
+        //手动设置future的完成状态
+        future.complete(20);
+    }
+}
+
+```
+
+
+
+### 异步执行任务
+
+```java
+package com.relatedtojava8;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+/**
+ * @Description: 异步执行任务
+ * @Date : 17:24 2020/7/6
+ */
+public class AysnCompletableFuture {
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        CompletableFuture<Integer> future = CompletableFuture
+                .supplyAsync(() -> calc(50));
+        System.out.println(future.get());
+    }
+
+    private static Integer calc(int i) {
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return i * i ;
+    }
+}
+
+```
+
+类似`supplyAsync`方法的有：
+
+- java.util.concurrent.CompletableFuture#supplyAsync(java.util.function.Supplier<U>)
+- java.util.concurrent.CompletableFuture#supplyAsync(java.util.function.Supplier<U>, java.util.concurrent.Executor)
+- java.util.concurrent.CompletableFuture#runAsync(java.lang.Runnable)
+- java.util.concurrent.CompletableFuture#runAsync(java.lang.Runnable, java.util.concurrent.Executor)
+
+
+
+### 使用`CompletionStage`实现的流式调用
+
+```java
+package com.relatedtojava8;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+/**
+ * @Description: 流式调用
+ * @Date : 17:24 2020/7/6
+ */
+public class AysnCompletableFuture {
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        //流式调用
+        CompletableFuture<Void> future = CompletableFuture
+                .supplyAsync(() -> calc(50))
+                .thenApply(i -> Integer.toString(i))
+                .thenApply(s -> "\"" + s + "\"")
+                .thenAccept(System.out::println);
+        future.get();
+    }
+
+    private static Integer calc(int i) {
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return i * i ;
+    }
+}
+```
+
+
+
+### Completable异常处理
+
+```java
+package com.relatedtojava8;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+/**
+ * @Description: Completable异常处理
+ * @Date : 17:24 2020/7/6
+ */
+public class CompletableFutureExceptionDeal {
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        CompletableFuture<Void> future = CompletableFuture
+                .supplyAsync(() -> calc(50))
+                .exceptionally(throwable -> {
+                    System.out.println(throwable.toString());
+                    return 0;
+                })
+                .thenApply(i -> Integer.toString(i))
+                .thenApply(s -> "\"" + s + "\"")
+                .thenAccept(System.out::println);
+        future.get();
+    }
+
+    private static Integer calc(int i) {
+        return i / 0 ;
+    }
+}
+
+```
+
+输出：
+
+```properties
+java.util.concurrent.CompletionException: java.lang.ArithmeticException: / by zero
+"0"
+```
+
+
+
+### 组合Completable
+
+#### thenCompose
+
+其接受一个CompletionStage实例，再返回一个新的的CompletionStage实例
+
+```java
+    public <U> CompletableFuture<U> thenCompose(
+        Function<? super T, ? extends CompletionStage<U>> fn) {
+        return uniComposeStage(null, fn);
+    }
+```
+
+```java
+package com.relatedtojava8;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+/**
+ * @Description: 组合的CompletableFuture
+ * @Date : 9:56 2020/7/7
+ */
+public class CombineCompletableFuture {
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+
+        CompletableFuture<Void> fu = CompletableFuture
+                .supplyAsync(() -> calc(50))
+                .thenCompose(i -> {
+                    //接收上一个CompletableFuture执行的结果
+                    System.out.println(i);
+                    return CompletableFuture.supplyAsync(() -> calc(i));
+                })
+                .thenApply(s -> "\"" + s + "\"")
+                .thenAccept(System.out::println);
+        fu.get();
+    }
+
+    private static Integer calc(int i) {
+        return i / 2 ;
+    }
+
+}
+
+```
+
+输出：
+
+```properties
+25
+"12"
+```
+
+
+
+#### thenCombine
+
+```java
+    public <U,V> CompletableFuture<V> thenCombine(
+        CompletionStage<? extends U> other,
+        BiFunction<? super T,? super U,? extends V> fn) {
+        return biApplyStage(null, other, fn);
+    }
+```
+
+```java
+package com.relatedtojava8;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+/**
+ * @Description: 组合的CompletableFuture
+ * @Date : 9:56 2020/7/7
+ */
+public class CombineCompletableFuture {
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+
+        //thenCombine
+        CompletableFuture<Integer> fu1 = CompletableFuture.supplyAsync(() -> calc(50));
+        CompletableFuture<Integer> fu2 = CompletableFuture.supplyAsync(() -> calc(40));
+        //根据fu1和fu2的计算结果处理
+        CompletableFuture<Void> voidCompletableFuture = fu1.thenCombine(fu2, (i, j) -> (i + j))
+                .thenApply(s -> "\"" + s + "\"")
+                .thenAccept(System.out::println);
+
+
+        voidCompletableFuture.get();
+    }
+
+    private static Integer calc(int i) {
+        return i / 2 ;
+    }
+
+}
+
+```
+
+输出：
+
+```properties
+"45"
+```
+
+
+
+274页
 
 
 

@@ -166,7 +166,14 @@ File[] hiddenFiles = mainDirectory.listFiles(f -> f.isHidden());
 File[] hiddenFilesa = mainDirectory.listFiles(File::isHidden);
 ```
 
+方法引用可分为以下几种：
 
+- 静态方法引用：ClassName::methodName
+- 实例上实例方法引用：instanceReference::methodName
+- 超类上实例方法引用：super::methodName
+- 类型上的实例方法引用：ClassName::methodName
+- 构造方法引用：Class::new
+- 数组构造方法引用：TypeName[]::new
 
 匿名内置类和lambda表达式
 

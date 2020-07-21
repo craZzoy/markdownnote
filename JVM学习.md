@@ -1,0 +1,750 @@
+# OOM异常（基于jdk8）
+
+## heap溢出
+
+### 演示
+
+```java
+package com.test;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class OOMDemo {
+
+    public static void main(String[] args) {
+        testHeapOOM();
+        System.gc();
+    }
+
+    /**
+     * 测试java堆溢出
+     * VM args：-Xms20m -Xmx20m -XX:+HeapDumpOnOutOfMemoryError
+     */
+    public static void testHeapOOM(){
+        List<OOMObject> oomObjects = new ArrayList<>();
+        while (true){
+            oomObjects.add(new OOMObject());
+        }
+    }
+
+
+    static class OOMObject{
+
+    }
+}
+
+```
+
+输出：
+
+```properties
+java.lang.OutOfMemoryError: Java heap space
+Dumping heap to java_pid23312.hprof ...
+Heap dump file created [28250839 bytes in 0.086 secs]
+Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+	at java.util.Arrays.copyOf(Arrays.java:3210)
+	at java.util.Arrays.copyOf(Arrays.java:3181)
+	at java.util.ArrayList.grow(ArrayList.java:265)
+	at java.util.ArrayList.ensureExplicitCapacity(ArrayList.java:239)
+	at java.util.ArrayList.ensureCapacityInternal(ArrayList.java:231)
+	at java.util.ArrayList.add(ArrayList.java:462)
+	at com.test.OOMDemo.testHeapOOM(OOMDemo.java:20)
+	at com.test.OOMDemo.main(OOMDemo.java:9)
+```
+
+### 解决方案
+
+- 内存泄漏：通过工具查看泄漏对象到GC Roots的引用链。找到泄漏的对象定位到引起泄漏代码位置
+  - 可用工具：VisualVM
+- 非内存泄漏：加大堆内存（初始Xms，最大Xmx）
+
+
+
+## stack溢出
+
+Host虚拟机中不区分虚拟机栈和本地方法栈，存在参数：
+
+- `-Xoss`：本地方法栈容量，实际并无效果
+- `-Xss`：栈容量，包括本地方法栈和虚拟机栈
+
+### 栈异常
+
+- `StackOverflowError`：线程请求的栈深度大于虚拟机所允许的深度
+- `OutOfMemoryError`：栈拓展时无法申请到足够的内存空间
+
+实际中`StackOverflowError`出现的比较多
+
+### 演示
+
+`StackOverflowError`错误：
+
+```java
+package com.test;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class OOMDemo {
+    
+    private int stackLength = 1;
+
+    public static void main(String[] args) {
+        testStackOOM();
+    }
+    
+    public void stackLeak(){
+        stackLength++;
+        stackLeak();
+    }
+
+
+    /**
+     * 测试栈溢出
+     * VM args：-Xss128k（设置栈容量）
+     */
+    public static void testStackOOM(){
+        OOMDemo oomDemo = new OOMDemo();
+        try{
+            oomDemo.stackLeak();
+        } catch (Throwable t){
+            System.out.println("stack length:"+oomDemo.stackLength);
+            throw t;
+        }
+    }
+
+
+}
+
+```
+
+运行结果：
+
+```properties
+stack length:988
+Exception in thread "main" java.lang.StackOverflowError
+	at com.test.OOMDemo.stackLeak(OOMDemo.java:39)
+	...
+```
+
+
+
+### 解决方案
+
+- `-Xss`增大栈容量
+- 避免较大量的递归操作
+
+
+
+## 方法区和运行时常量池溢出
+
+### 背景
+
+- java7及java7之前，字符串常量池在方法区中
+  - String.intern()可能会引起方法区溢出
+- java7之后，字符串常量池已在堆中实现
+  - 此时String.intern()不会引起永久代（方法区）溢出
+- java8中移除了PermGen，将其中的方法区移到了Metaspace中
+  - PermGen使用的是虚拟机内存
+  - Metaspace使用的是本地内存
+
+### 参数
+
+- -XX:MetaspaceSize：初始值
+- -XX:MaxMetaspaceSize：最大值
+- -XX:MinMetaspaceFreeRatio：gc后最小Metaspace剩余空间容量百分比，减少分配空间导致的垃圾回收
+- -XX:MinMetaspaceFreeRatio：gc后最大Metaspace剩余空间容量百分比，减少释放空间导致的垃圾回收
+
+### 演示
+
+```java
+package com.test;
+
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.MethodInterceptor;
+import net.sf.cglib.proxy.MethodProxy;
+import sun.misc.Unsafe;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
+public class OOMDemo {
+
+    public static void main(String[] args) {
+        //testPermSize();
+        testMetaspaceOOM();
+    }
+
+    static class OOMObject{
+
+    }
+
+
+
+
+    /**
+     * 方法区溢出
+     * VM args：-XX:PermSize=10M -XX:MaxPermSize=10M（jdk7以及之前可用）
+     */
+    public static void testPermSize(){
+        List<String> list = new ArrayList<>();
+        int i = 0;
+        while(true){
+            list.add(String.valueOf(i++).intern());
+        }
+    }
+
+    /**java8
+     * 方法区溢出（Metaspace是方法区实现），通过cglib动态创建类信息
+     * -XX:MetaspaceSize=10M(初始) -XX:MaxMetaspaceSize=10M（最大）
+     */
+    public static void testMetaspaceOOM(){
+        while (true){
+            Enhancer enhancer = new Enhancer();
+            enhancer.setSuperclass(OOMObject.class);
+            enhancer.setUseCache(false);
+            enhancer.setCallback(new MethodInterceptor() {
+                @Override
+                public Object intercept(Object o, Method method, Object[] objects, MethodProxy methodProxy) throws Throwable {
+                    return methodProxy.invoke(o,objects);
+                }
+            });
+            enhancer.create();
+        }
+    }
+
+
+}
+
+```
+
+输出：
+
+```properties
+Exception in thread "main" net.sf.cglib.core.CodeGenerationException: java.lang.reflect.InvocationTargetException-->null
+	at net.sf.cglib.core.AbstractClassGenerator.create(AbstractClassGenerator.java:237)
+	at net.sf.cglib.proxy.Enhancer.createHelper(Enhancer.java:377)
+	at net.sf.cglib.proxy.Enhancer.create(Enhancer.java:285)
+	at com.test.OOMDemo.testMetaspaceOOM(OOMDemo.java:93)
+	at com.test.OOMDemo.main(OOMDemo.java:22)
+Caused by: java.lang.reflect.InvocationTargetException
+	at sun.reflect.GeneratedMethodAccessor1.invoke(Unknown Source)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at net.sf.cglib.core.ReflectUtils.defineClass(ReflectUtils.java:384)
+	at net.sf.cglib.core.AbstractClassGenerator.create(AbstractClassGenerator.java:219)
+	... 4 more
+Caused by: java.lang.OutOfMemoryError: Metaspace
+	at java.lang.ClassLoader.defineClass1(Native Method)
+	at java.lang.ClassLoader.defineClass(ClassLoader.java:763)
+	... 9 more
+```
+
+### 解决方案
+
+- 增大metaspace大小
+- 优化类似创建cglib代理这样的代码
+
+
+
+## 本机直接内存溢出
+
+### DirectMemory参数
+
+- -XX:MaxDirectMemorySize：直接内存最大值
+- -Xmx：未指定-XX:MaxDirectMemorySize，其为直接内存最大值
+
+
+
+### 演示
+
+```java
+package com.test;
+
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.MethodInterceptor;
+import net.sf.cglib.proxy.MethodProxy;
+import sun.misc.Unsafe;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
+public class OOMDemo {
+
+    public static void main(String[] args) {
+        //testHeapOOM();
+        //System.gc();
+
+        //testStackOOM();
+
+        //testPermSize();
+        testDirectSpaceOOM();
+    }
+
+    static class OOMObject{
+
+    }
+
+    /**
+     * 直接内存溢出
+     * VM args：-XX:MaxDirectMemorySize=10M
+     * @throws IllegalAccessException
+     */
+    public static void testDirectSpaceOOM() {
+        Field field = Unsafe.class.getDeclaredFields()[0];
+        field.setAccessible(true);
+        Unsafe unsafe = null;
+        try {
+            unsafe = (Unsafe)field.get(null);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        while (true){
+            //申请内存
+            unsafe.allocateMemory(1024*1024);
+        }
+    }
+
+}
+
+```
+
+输出：
+
+```properties
+Exception in thread "main" java.lang.OutOfMemoryError
+	at sun.misc.Unsafe.allocateMemory(Native Method)
+	at com.test.OOMDemo.testDirectSpaceOOM(OOMDemo.java:115)
+	at com.test.OOMDemo.main(OOMDemo.java:22)
+```
+
+由DirectMemory导致的内存溢出明显特征是Dump文件很小，例如使用了NIO，应该考虑这种情况
+
+
+
+# 垃圾收集和内存分配
+
+## GC日志参数
+
+- `-XX:+PrintGC`：输出gc日志
+- `-XX:+PrintGCDetails`：输出详细gc日志
+- `-XX:+PrintGCTimeStamps`： 输出GC的时间戳（以基准时间的形式）
+- `-XX:+PrintGCDateStamps`：输出GC的时间戳（以日期的形式，如 2013-05-04T21:53:59.234+0800）
+- `-XX:+PrintHeapAtGC`：在gc前打印堆的信息
+- `-Xloggc:../logs/gc.log`：gc日志文件的输出路径
+
+## 如何判断对象已死
+
+- 引用计数算法：给对象添加一个计数器，每当一个对方引用它时，计数器加1，引用失效时，计数器减1。计算器为0时就表示对象已死。
+
+  java中是不是用的引用计数器算法？
+
+  ```java
+  package com.test;
+  
+  public class GcDemo {
+  
+      private static final int _1MB = 1024*1024;
+  
+      //用于占用内存，以便查看是否gc
+      private byte[] bigSize = new byte[2*_1MB];
+  
+      public static void main(String[] args) {
+  //        char ch = '你';
+  //        System.out.println(Character.valueOf(ch));
+          testIsRefrenceCountingGc();
+      }
+  
+      /**
+       * 测试是否引用计数法
+       * VM args：-XX:+PrintGCDetails -XX:+PrintGCTimeStamps
+       */
+      public static void testIsRefrenceCountingGc(){
+          RefrenceCountingGc objA = new RefrenceCountingGc();
+          RefrenceCountingGc objB = new RefrenceCountingGc();
+          objA.instance = objB;
+          objB.instance = objA;
+  
+          objA = null;
+          objB = null;
+  
+          System.gc();
+      }
+  
+      static class RefrenceCountingGc{
+          public Object instance = null;
+      }
+  }
+  
+  ```
+
+  输出：
+
+  ```properties
+  0.217: [GC (System.gc()) [PSYoungGen: 3336K->808K(38400K)] 3336K->816K(125952K), 0.0014017 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+  0.219: [Full GC (System.gc()) [PSYoungGen: 808K->0K(38400K)] [ParOldGen: 8K->665K(87552K)] 816K->665K(125952K), [Metaspace: 3364K->3364K(1056768K)], 0.0074006 secs] [Times: user=0.00 sys=0.00, real=0.01 secs] 
+  Heap
+   PSYoungGen      total 38400K, used 998K [0x00000000d5f00000, 0x00000000d8980000, 0x0000000100000000)
+    eden space 33280K, 3% used [0x00000000d5f00000,0x00000000d5ff9b20,0x00000000d7f80000)
+    from space 5120K, 0% used [0x00000000d7f80000,0x00000000d7f80000,0x00000000d8480000)
+    to   space 5120K, 0% used [0x00000000d8480000,0x00000000d8480000,0x00000000d8980000)
+   ParOldGen       total 87552K, used 665K [0x0000000081c00000, 0x0000000087180000, 0x00000000d5f00000)
+    object space 87552K, 0% used [0x0000000081c00000,0x0000000081ca6650,0x0000000087180000)
+   Metaspace       used 3371K, capacity 4500K, committed 4864K, reserved 1056768K
+    class space    used 373K, capacity 388K, committed 512K, reserved 1048576K
+  ```
+
+  日志理解：
+
+  ```properties
+  0.217: [GC (System.gc()) [PSYoungGen: 3336K->808K(38400K)] 3336K->816K(125952K), 0.0014017 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+  ```
+
+  - “`0.217`”指gc发生的时间，含义是从java虚拟机启动后经过的秒数
+  - “`GC (System.gc())`”表示垃圾收集的停顿类型
+  - `PSYoungGen: 3336K->808K(38400K)`表示“gc前新生代使用内存->gc后新生代使用内存（新生代内存区域总容量），依次类似
+  - `3336K->816K(125952K)`表示堆的容量信息
+  - `Times: user=0.00 sys=0.00, real=0.00 secs`分别表示
+    - 用户态消耗CPU时间
+    - 内核态消耗CPU时间
+    - 开始到结束经过的墙钟时间（例如IO耗时、阻塞耗时）
+
+  从`816K->665K(125952K)`侧面反映出对象已经被回收，即java使用的判断算法并非是引用计数器算法
+
+- 可达性分析算法：通过一系列的称为“GC Roots”的对象作为起点，从这个节点沿着“引用链”往下搜索，当一个对象到Gc Roots没有任何一个引用链相连时，即GC不可达时，对象不可用。
+
+  ![1570446496507](D:\BaiduNetdiskDownload\markdown笔记\类加载器与双亲委派模型.assets\1570446496507.png)
+
+  可作为GC Root的对象：
+
+  - 虚拟机栈（栈帧的本地变量表）中引用的对象
+  - 方法区中类静态属性引用的变量
+  - 方法区中常量引用的对象
+  - 本地方法栈中的JNI引用的对象
+
+## 引用类型
+
+- 强引用：如“Object o = new Object()”，只要强引用还在，垃圾收集器就不会回收
+- 软引用：SoftReference实现。用来描述一些还有用但非必须的对象。在系统要发生内存泄漏之前会把这些对象列进回收范围内进行第二次回收，这次回收后还没有足够的内存才抛出内存溢出异常
+- 弱引用：WeakReference实现。同样用来描述一些非必须对象。但被弱引用关联的对象只能生存到下一次垃圾回收之前。gc时无论内存是否够用，都会对此类对象进行回收
+- 虚引用：PhantomRefence实现。也称为幽灵引用或者幻影引用，是最弱的引用关系。虚引用不会影响对象的生存时间，也无法通过引用关系获得一个对象实例。仅仅起到的效果是gc回收时会收到一个系统通知。
+
+```java
+/**
+* 测试引用类型
+*/
+public static void testRefrence(){
+        String s = new String("Hello");
+        Reference reference = new SoftReference(s);
+        System.out.println(reference.get());
+
+        ReferenceQueue referenceQueue = new ReferenceQueue();
+        Reference phantomReference = new PhantomReference(s,referenceQueue);
+        System.out.println(phantomReference.get());
+
+    }
+```
+
+输出：
+
+```properties
+Hello
+null
+```
+
+
+
+## finalize()方法
+
+要真正宣告一个对象死亡，至少要经历两次标记过程。finalize()方法是对象逃脱死亡命运的最后一次机会，且该方法只会调用一次
+
+1. gc时进行可达性分析，若不可达，第一次标记且进行第一次筛选
+   - 筛选：判断是否有必要执行finalize()方法
+     - 有必要：对象覆盖了finalize()方法且虚拟机没有调用过该方法，将该对象放入一个F-Queue中，虚拟机会开一个低优先级的finalize的线程执行finalize方法，但不确保等待它执行完（可能会阻塞、内存溢出）
+     - 没必要：对象没覆盖了finalize()方法或者虚拟机调用过该方法
+2. 对F-Queue中的对象进行第二次标记
+
+拯救对象示例：
+
+```java
+package com.test;
+
+public class FinalizeEscapeGC {
+    public static FinalizeEscapeGC SAVE_HOME = null;
+
+
+    /**
+     * 通过finalize()方法拯救自己
+     * @throws Throwable
+     */
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize();
+        System.out.println("finalize method running");
+        FinalizeEscapeGC.SAVE_HOME = this;
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        SAVE_HOME = new FinalizeEscapeGC();
+
+        //第一次自救
+        SAVE_HOME = null;
+        //触发第一次标记
+        System.gc();
+        //finalize()方法优先级很低，暂停0.5s等待
+        Thread.sleep(500);
+        if(SAVE_HOME != null){
+            System.out.println("SAVE_HOME is alive");
+        }else{
+            System.out.println("SAVE_HOME is dead");
+        }
+
+        //第二次自救
+        SAVE_HOME = null;
+        System.gc();
+        //finalize()方法优先级很低，暂停0.5s等待
+        Thread.sleep(500);
+        if(SAVE_HOME != null){
+            System.out.println("SAVE_HOME is alive");
+        }else{
+            System.out.println("SAVE_HOME is dead");
+        }
+    }
+}
+
+```
+
+输出：
+
+```properties
+finalize method running
+SAVE_HOME is alive
+SAVE_HOME is dead
+```
+
+> 建议：不要依赖finalize()拯救“濒临死亡”对象，也不要依赖其去关闭资源
+
+
+
+## 方法区回收
+
+方法区（jdk7中的永久代、jdk8中的metaspace）主要回收两部分的内容：
+
+- 废弃常量：如常量池有“abc”（jdk7以前的字符串）、当未有对象引用该字面量或者引用常量池中的“abc”常量时，它会被回收（类（接口）、方法、字符的符号引用类似）
+- 无用的类：需满足下述条件
+  - java堆中不存在该对象实例
+  - 加载该类的ClassLoader已经被回收
+  - 该类对应的java.lang.Class对象没有在任何地方引用，无法在任何地方通过反射访问该类的方法
+
+相关参数：
+
+- `-Xnoclassgc`：HotSpot虚拟机提供的参数，是否对方法区中类进行回收
+- `-verbose:class 、-XX:+TraceClassLoading、-XX:TraceClassUnLoading`：查看类加载和卸载信息。`verbose:class 、-XX:+TraceClassLoading`可在Product版中的虚拟机中使用，`-XX:TraceClassUnLoading`需要FaseDebug版本的虚拟机支持
+
+
+
+## 垃圾收集算法
+
+- 标记-清除算法：分为“标记”和“清除”两个阶段
+
+  - 标记：标记出所有需要清除的对象
+  - 清除：统一回收标记对象
+
+  ![1570454708396](D:\BaiduNetdiskDownload\markdown笔记\类加载器与双亲委派模型.assets\1570454708396.png)
+
+  缺点：
+
+  - 效率问题：标记和清除两个效率都不高
+  - 空间问题：清除后会产生大量不连续的内存碎片，当需要给一个较大对象分配内存时可能会找不到一段连续的空间，从而导致分配之前触发一次垃圾收集动作
+
+- 复制算法：将内存划分为大小相等的两块，每次只使用一块，gc后，存活的对象放入另一块内存中，然后清除该块使用的内存，每次只对一块内存进行回收。
+
+  ![1570455105967](D:\BaiduNetdiskDownload\markdown笔记\类加载器与双亲委派模型.assets\1570455105967.png)
+
+  缺点：
+
+  - 内存的一半才能使用
+
+  现在一般都是用该算法对新生代内存进行回收，一般是`Eden`:`from Survivor`:`to Survivor`=8:1:1，每次使用Eden和一块Survivor区，即每次使用90%的空间，只浪费了10%的空间。回收时，将eden区和`from Survivor`区中对象复制到`to Survivor`区，然后清理掉它们用过的空间。
+
+  当survivor空间不够时，需要依赖其他内存进行分配担保（老年代）
+
+- 标记-整理算法：
+
+  标记-复制算法对于存活率较高的区域使用时效率会比较低，而且要浪费空间，不想浪费就需要有额外的空间进行分配担保。所以常采用标记-整理算法对老年代中的对象进行回收，其与标记-清除算法不同的是，整理是指将存活的对象向一端移动，然后直接清理掉端外的内存
+
+  ![1570455926687](D:\BaiduNetdiskDownload\markdown笔记\类加载器与双亲委派模型.assets\1570455926687.png)
+
+- 分代收集算法：将内存“分代”处理，如新生代采用标记-复制算法，老年代采用标记-清理或者标记-整理算法
+
+
+
+## 内存分配与回收策略 
+
+
+
+
+
+
+
+# 虚拟机类加载机制
+
+类生命周期：
+
+- 加载
+- 验证
+- 准备
+- 解析
+- 初始化
+- 使用
+- 卸载
+
+前五步为类加载的过程
+
+# 类加载器和双亲委派模型
+
+​	对于任意一个类，都需要由加载它的类加载器和这个类本身一同确立其在JAVA虚拟机中的唯一性，每一个类加载器，都拥有一个独立的类名称空间。比较两个类是否“相等”，只有这两个类是由同一个类加载加载的前提下才有意义，看下述例子：
+
+```java
+package com.loader;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+public class ClassLoaderTest {
+    public static void main(String[] args) throws Exception{
+
+        //自定义类加载器实现
+        ClassLoader classLoader = new ClassLoader() {
+            @Override
+            public Class<?> loadClass(String name) throws ClassNotFoundException {
+
+                try {
+                    String fileName = name.substring(name.lastIndexOf(".")+1)+".class";
+                    InputStream is = getClass().getResourceAsStream(fileName);
+                    if(is == null){
+                        return super.loadClass(name);
+                    }
+                    byte[] b = new byte[is.available()];
+                    is.read(b);
+                    return defineClass(name,b,0,b.length);
+                } catch (IOException e) {
+                    throw new ClassNotFoundException(name);
+                }
+            }
+        };
+
+        Object obj = classLoader.loadClass("com.loader.ClassLoaderTest").newInstance();
+        System.out.println(obj.getClass()); //class com.loader.ClassLoaderTest
+        System.out.println(obj instanceof com.loader.ClassLoaderTest);  //false
+    }
+}
+
+```
+
+
+
+## 双亲委派模型
+
+​	![1567485687058](D:\BaiduNetdiskDownload\markdown笔记\类加载器与双亲委派模型.assets\1567485687058.png)
+
+​	双亲由英文parent翻译而来，其实就是委派为父加载器处理，大部分java程序中，系统提供了三种类型的加载器：
+
+ 1. 启动类加载器（BootStrap ClassLoader）：负责加载<JAVA_HOME>\lib目录中rt.jar包中类或者被-Xbootclasspath所指定的路径中的并且是由虚拟机识别的类，用户无法获取启动类加载器的直接引用，Integer类就是在rt包中的，我们验证下前面说的属性
+	
+	```java
+	package com.loader;
+	
+	import java.io.IOException;
+	import java.io.InputStream;
+	
+	public class ClassLoaderTest {
+	    public static void main(String[] args) throws Exception{
+	        Integer i = 4;
+	        System.out.println(i.getClass().getClassLoader()); //null
+	    }
+	}
+	```
+	
+	> BootStrap ClassLoader是不能被获取的，所以为null
+	
+ 2. 拓展类加载器（Extension ClassLoader）：由sun.misc.Launcher$ExtClassLoader实现，负责加载<JAVA_HOME>\lib\ext目录中的类或者被java.ext.dirs系统变量多指定的路径中的所有类库，开发者可以直接使用。
+
+ 3. 应用程序类加载器（Application ClassLoader）：由sun.misc.Launcher$AppClassLoader实现，又称系统类加载器，因为ClassLoader.getSystemClassLoader()返回的ClassLoader就是AppClassLoader。它负责加载classpath上所指定的类库，开发者可以直接使用，若程序中没有自定义的加载器，默认的类加载器就是它。看下述程序，类加载器的层次结构为：BootStrapClassLoader>>ExtClassLoader>>AppClassLoader>>用户自定义加载器
+
+    ```java
+    package com.loader;
+    
+    import javax.jnlp.ServiceManager;
+    import java.io.IOException;
+    import java.io.InputStream;
+    
+    public class ClassLoaderTest {
+        public static void main(String[] args) throws Exception{
+    
+            ClassLoader c = ClassLoaderTest.class.getClassLoader();
+            while(c!=null){
+                System.out.println(c);
+                c = c.getParent();
+            }
+    
+            //系统类加载器
+            System.out.println("系统类加载器："+ClassLoader.getSystemClassLoader());
+    
+        }
+    }
+    ```
+
+    ```xml
+    sun.misc.Launcher$AppClassLoader@18b4aac2
+    sun.misc.Launcher$ExtClassLoader@4554617c
+    系统类加载器：sun.misc.Launcher$AppClassLoader@18b4aac2
+    ```
+
+双亲委派模型决定了类加载的过程，具体实现看java.lang.ClassLoader#loadClass(java.lang.String, boolean)方法：
+
+```java
+protected Class<?> loadClass(String name, boolean resolve)
+    throws ClassNotFoundException
+{
+    synchronized (getClassLoadingLock(name)) {
+        // First, check if the class has already been loaded
+        Class<?> c = findLoadedClass(name);
+        if (c == null) {
+            long t0 = System.nanoTime();
+            try {
+                if (parent != null) {
+                    c = parent.loadClass(name, false);
+                } else {
+                    c = findBootstrapClassOrNull(name);
+                }
+            } catch (ClassNotFoundException e) {
+                // ClassNotFoundException thrown if class not found
+                // from the non-null parent class loader
+            }
+
+            if (c == null) {
+                // If still not found, then invoke findClass in order
+                // to find the class.
+                long t1 = System.nanoTime();
+                c = findClass(name);
+
+                // this is the defining class loader; record the stats
+                sun.misc.PerfCounter.getParentDelegationTime().addTime(t1 - t0);
+                sun.misc.PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);
+                sun.misc.PerfCounter.getFindClasses().increment();
+            }
+        }
+        if (resolve) {
+            resolveClass(c);
+        }
+        return c;
+    }
+}
+```
+
+> 即从最顶层的Bootstrap ClassLoader查找起，父ClassLoader能加载则使用其加载，否则使用当前类加载器。

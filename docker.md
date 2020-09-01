@@ -181,7 +181,7 @@ end
 
 ## box的打包分发
 
-```properties
+```shell
 01 退出虚拟机
 	vagrant halt
 

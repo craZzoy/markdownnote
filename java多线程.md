@@ -1035,9 +1035,9 @@ Thread-0
 
 
 
-### volitile和JMM
+### volatile和JMM
 
-volitile的作用：
+volatile的作用：
 
 - 保证非复合原子操作
 
@@ -1094,7 +1094,7 @@ volitile的作用：
   
   ```
 
-  > 该程序在32位虚拟机中，long类型的数组操作不是原子性的（long是64位的），所以会有出现与赋的值与一样的情况，即long类型中的高32位和低32位未保证同一时刻赋值。
+  > 该程序在32位虚拟机中，long类型的数组操作不是原子性的（long是64位的），所以会有出现与赋的值不一样的情况，即long类型中的高32位和低32位未保证同一时刻赋值。
   >
   > 此时使用volatile关键字可解决这个问题
 
@@ -1190,7 +1190,7 @@ volitile的作用：
 
   > 上述例子中由于主线程修改的值不能被ReaderThread立刻看见，所以导致其一直阻塞在那。
   >
-  > 一般由于运行在client端引起的（通过-server JVM参数修改未运行在server端），但实际java8测试两种都一样
+  > 一般由于运行在client端引起的（通过-server JVM参数修改为运行在server端），但实际java8测试两种都一样
 
   通过对ready变量加入volatile关键字，可解决问题：
 
@@ -4344,6 +4344,71 @@ public class FutureMain {
 
 
 ### JDK中Future实现
+
+![image-20200918155940780](C:/Users/Lenovo/AppData/Roaming/Typora/typora-user-images/image-20200918155940780.png)
+
+示例代码：
+
+```java
+package com.concurrent.pattern.future.jdk;
+
+import java.util.Random;
+import java.util.concurrent.Callable;
+
+/**
+ * @Description: 真实数据
+ */
+public class RealData implements Callable<String> {
+
+    private String para;
+
+    public RealData(String para) {
+        this.para = para;
+    }
+
+    @Override
+    public String call() throws Exception {
+        //模拟构造数据很慢的过程
+        Random random  = new Random();
+        int size = random.nextInt() % 10;
+        StringBuffer buffer = new StringBuffer();
+        for (int i = 0; i < size; i++) {
+            buffer.append(para);
+        }
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return buffer.toString();
+    }
+}
+
+```
+
+```java
+package com.concurrent.pattern.future.jdk;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+
+/**
+ * @Description: 执行类
+ */
+public class Main {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        FutureTask task = new FutureTask(new RealData("name"));
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        executorService.submit(task);
+        System.out.println("数据"  + task.get());
+    }
+}
+
+```
+
+
 
 
 

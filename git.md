@@ -2,6 +2,18 @@
 
 **git和svn的区别**
 
+
+
+git checkout  e32dd10  //切换分支
+git checkout -b temp   //创建分支temp
+git checkout master    //git merge temp 合并temp分支切换到master分支
+git merge temp         //合并temp分支
+git branch -d temp     //删除temp分支
+
+
+
+
+
 svn属于CVCSs Centralized，即集中式的代码管理工具，最新的版本靠远端维护，用户抓取时只抓取最新的记录。
 
 ![img](E:\note_files\sina3479701051\bb27f3c3f5c348b885737b41695be64e\clipboard.png)

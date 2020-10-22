@@ -292,3 +292,106 @@ jar -uvf
 容器
 
 jeckin
+
+
+
+# Shell脚本编程
+
+helloworld：
+
+linux中shel分为：
+
+- Bourne Shell（/usr/bin/sh或/bin/sh）
+- Bourne Again Shell（/bin/bash）
+- C Shell（/usr/bin/csh）
+- K Shell（/usr/bin/ksh）
+- Shell for Root（/sbin/sh）
+- ...
+
+helloworld实例：
+
+```shell
+#!/bin/bash
+echo "Hello World !"
+```
+
+> 第一行标明使用哪种shell解析器执行
+
+运行方式：
+
+1. 作为可执行参数
+
+   ```shell
+   chmod +x ./test.sh  #使脚本具有执行权限
+   ./test.sh  #执行脚本
+   ```
+
+2. 作为解释器参数
+
+   ```shell
+   /bin/sh test.sh
+   /bin/php test.php
+   ```
+
+
+
+
+## Shell 变量
+
+### 注释
+
+- 单行注释：
+
+  ```shell
+  ##### 用户配置区 开始 #####
+  ```
+
+- 多行注释
+
+  - 多个#
+
+    ```shell
+    #--------------------------------------------
+    # 这是一个注释
+    # author：菜鸟教程
+    # site：www.runoob.com
+    # slogan：学的不仅是技术，更是梦想！
+    #--------------------------------------------
+    ##### 用户配置区 开始 #####
+    #
+    #
+    # 这里可以添加脚本描述信息
+    # 
+    #
+    ##### 用户配置区 结束  #####
+    ```
+
+  - 用花括号括起来，将其定义为一个函数，没有地方调用这块代码就不会执行
+
+  - 使用EOF
+
+    ```shell
+    :<<EOF
+    注释内容...
+    注释内容...
+    注释内容...
+    EOF
+    ```
+
+    或
+
+    ```shell
+    :<<'
+    注释内容...
+    注释内容...
+    注释内容...
+    '
+    
+    :<<!
+    注释内容...
+    注释内容...
+    注释内容...
+    !
+    ```
+
+    

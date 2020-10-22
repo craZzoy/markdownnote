@@ -4868,3 +4868,33 @@ public class CombineCompletableFuture {
 
 HashMap和ConcurrentHashMap的实现原理
 
+
+
+# JAVA中的锁
+
+https://mp.weixin.qq.com/s/kMyyHaDQn-Da8MTmpPUyfg
+
+![image-20200929144103120](java多线程.assets/image-20200929144103120.png)
+
+应用
+
+| 序号 | 锁名称   | 应用                                                         |
+| :--- | :------- | :----------------------------------------------------------- |
+| 1    | 乐观锁   | CAS                                                          |
+| 2    | 悲观锁   | synchronized、vector、hashtable                              |
+| 3    | 自旋锁   | CAS                                                          |
+| 4    | 可重入锁 | synchronized、Reentrantlock、Lock                            |
+| 5    | 读写锁   | ReentrantReadWriteLock，CopyOnWriteArrayList、CopyOnWriteArraySet |
+| 6    | 公平锁   | Reentrantlock(true)                                          |
+| 7    | 非公平锁 | synchronized、reentrantlock(false)                           |
+| 8    | 共享锁   | ReentrantReadWriteLock中读锁                                 |
+| 9    | 独占锁   | synchronized、vector、hashtable、ReentrantReadWriteLock中写锁 |
+| 10   | 重量级锁 | synchronized                                                 |
+| 11   | 轻量级锁 | 锁优化技术                                                   |
+| 12   | 偏向锁   | 锁优化技术                                                   |
+| 13   | 分段锁   | concurrentHashMap                                            |
+| 14   | 互斥锁   | synchronized                                                 |
+| 15   | 同步锁   | synchronized                                                 |
+| 16   | 死锁     | 相互请求对方的资源                                           |
+| 17   | 锁粗化   | 锁优化技术                                                   |
+| 18   | 锁消除   | 锁优化技术                                                   |

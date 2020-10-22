@@ -37,7 +37,9 @@ https://www.jianshu.com/p/e8dec95c4326
 
 
 
+spring cloud alibaba
 
+https://start.aliyun.com/article/sca7lesson/rpc
 
 
 
@@ -52,7 +54,7 @@ https://www.jianshu.com/p/e8dec95c4326
 - quartz集群解决方案：基于数据库悲观锁策略实现
   - 缺点：只解决了高可用的问题，并未解决任务分片的问题，存在单机性能瓶颈
 - TBSchedule
-- elastic-job
+- elastic-job：https://shardingsphere.apache.org/elasticjob/index_zh.html
 - Saturn
 - xxl-job
 
@@ -1146,3 +1148,18 @@ The configuration above will search for test classes in:
 # 文件系统
 
 - fastDFS
+
+
+
+
+
+
+
+# JSR #380 Bean Validation 2.0
+
+> Bean Validation 2.0 是JSR第380号标准。该标准连接如下：https://www.jcp.org/en/egc/view?id=380
+> Bean Validation的主页：[http://beanvalidation.org](http://beanvalidation.org/)
+> Bean Validation的参考实现：https://github.com/hibernate/hibernate-validator
+
+
+

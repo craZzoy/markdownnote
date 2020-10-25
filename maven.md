@@ -1812,6 +1812,10 @@ profile中配置执行TestNG测试组
 
 # 编写Maven插件
 
+常用maven插件：https://mp.weixin.qq.com/s/cWg30L0pxZzBeBG0dER8-Q
+
+
+
 
 
 # archetype

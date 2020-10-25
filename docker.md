@@ -1,3 +1,7 @@
+# windows安装docker
+
+
+
 # 概念
 
 docker是一个给开发者、系统管理员用容器构建、分享和运行程序的一个平台。这种用容器部署运用的技术叫做容器化。
@@ -181,7 +185,7 @@ end
 
 ## box的打包分发
 
-```properties
+```shell
 01 退出虚拟机
 	vagrant halt
 

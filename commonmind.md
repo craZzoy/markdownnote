@@ -1,11 +1,82 @@
+1. 小马哥spring编程思想
+2. 网络编程
+   1. Java_TCPIP_Socket 网络编程.pd  
+   2. Java 网络编程  
+   3. NIO、mina、netty
+3. Java rpc机制
+   1. rmi
+   2. hession
+   3. thrift
+   4. webservice
+4. 
+
+
+
+# 学习资源
+
+Python
+
+链接: https://pan.baidu.com/s/1NhSJb97UaN1dn0TvN6SrNw 提取码: h1m2
+链接: https://pan.baidu.com/s/1lRBvpRtx2LjkAkvd0sG4kQ 提取码: zh45
+链接: https://pan.baidu.com/s/1L4pMwA8b2l6SQCNLuspB8w 提取码: 38dj
+链接: https://pan.baidu.com/s/1-KWm88SJwEfmtFV2SDTn4w 提取码: ozi6
+链接: https://pan.baidu.com/s/1yyoBL-Cf2ZtY4035cKHgzw 提取码: y628
+链接: https://pan.baidu.com/s/1zfF5h3RUzNwoX1wMwloffQ 提取码: 8l99[/hide]
+
+
+
+springCloud Alibaba
+
+https://developer.aliyun.com/article/762296?utm_content=g_1000128689
+
+
+
+groovy语言入门
+
+https://www.jianshu.com/p/e8dec95c4326
+
+
+
+spring cloud alibaba
+
+https://start.aliyun.com/article/sca7lesson/rpc
+
+
+
+# 定时任务
+
+## quartz定时任务框架
+
+
+
+## 分布式定时任务框架
+
+- quartz集群解决方案：基于数据库悲观锁策略实现
+  - 缺点：只解决了高可用的问题，并未解决任务分片的问题，存在单机性能瓶颈
+- TBSchedule
+- elastic-job：https://shardingsphere.apache.org/elasticjob/index_zh.html
+- Saturn
+- xxl-job
+
+
+
+
+
 # HTTP调用方式
 
 - JDK URLConnection
 - Apache HTTP Client
 - Netty异步HTTP client
-- Spring RestTemplate
+- OkHttp
+- Spring 
+  - RestTemplate：同步调用
+  - WebClient：支持同步、异步调用
 
 
+
+# IO流
+
+HttpConnection阻塞等待问题
 
 
 
@@ -1077,3 +1148,18 @@ The configuration above will search for test classes in:
 # 文件系统
 
 - fastDFS
+
+
+
+
+
+
+
+# JSR #380 Bean Validation 2.0
+
+> Bean Validation 2.0 是JSR第380号标准。该标准连接如下：https://www.jcp.org/en/egc/view?id=380
+> Bean Validation的主页：[http://beanvalidation.org](http://beanvalidation.org/)
+> Bean Validation的参考实现：https://github.com/hibernate/hibernate-validator
+
+
+

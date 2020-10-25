@@ -417,7 +417,7 @@ Exception in thread "main" java.lang.OutOfMemoryError
 
 - 可达性分析算法：通过一系列的称为“GC Roots”的对象作为起点，从这个节点沿着“引用链”往下搜索，当一个对象到Gc Roots没有任何一个引用链相连时，即GC不可达时，对象不可用。
 
-  ![1570446496507](C:\Users\zwz\Documents\JVM优化.assets\1570446496507.png)
+  ![1570446496507](类加载器与双亲委派模型.assets\1570446496507.png)
 
   可作为GC Root的对象：
 
@@ -554,7 +554,7 @@ SAVE_HOME is dead
   - 标记：标记出所有需要清除的对象
   - 清除：统一回收标记对象
 
-  ![1570454708396](C:\Users\zwz\Documents\JVM优化.assets\1570454708396.png)
+  ![1570454708396](类加载器与双亲委派模型.assets\1570454708396.png)
 
   缺点：
 
@@ -563,7 +563,7 @@ SAVE_HOME is dead
 
 - 复制算法：将内存划分为大小相等的两块，每次只使用一块，gc后，存活的对象放入另一块内存中，然后清除该块使用的内存，每次只对一块内存进行回收。
 
-  ![1570455105967](C:\Users\zwz\Documents\JVM优化.assets\1570455105967.png)
+  ![1570455105967](类加载器与双亲委派模型.assets\1570455105967.png)
 
   缺点：
 
@@ -577,7 +577,7 @@ SAVE_HOME is dead
 
   标记-复制算法对于存活率较高的区域使用时效率会比较低，而且要浪费空间，不想浪费就需要有额外的空间进行分配担保。所以常采用标记-整理算法对老年代中的对象进行回收，其与标记-清除算法不同的是，整理是指将存活的对象向一端移动，然后直接清理掉端外的内存
 
-  ![1570455926687](C:\Users\zwz\Documents\JVM优化.assets\1570455926687.png)
+  ![1570455926687](类加载器与双亲委派模型.assets\1570455926687.png)
 
 - 分代收集算法：将内存“分代”处理，如新生代采用标记-复制算法，老年代采用标记-清理或者标记-整理算法
 
@@ -587,3 +587,164 @@ SAVE_HOME is dead
 
 
 
+
+
+
+
+# 虚拟机类加载机制
+
+类生命周期：
+
+- 加载
+- 验证
+- 准备
+- 解析
+- 初始化
+- 使用
+- 卸载
+
+前五步为类加载的过程
+
+# 类加载器和双亲委派模型
+
+​	对于任意一个类，都需要由加载它的类加载器和这个类本身一同确立其在JAVA虚拟机中的唯一性，每一个类加载器，都拥有一个独立的类名称空间。比较两个类是否“相等”，只有这两个类是由同一个类加载加载的前提下才有意义，看下述例子：
+
+```java
+package com.loader;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+public class ClassLoaderTest {
+    public static void main(String[] args) throws Exception{
+
+        //自定义类加载器实现
+        ClassLoader classLoader = new ClassLoader() {
+            @Override
+            public Class<?> loadClass(String name) throws ClassNotFoundException {
+
+                try {
+                    String fileName = name.substring(name.lastIndexOf(".")+1)+".class";
+                    InputStream is = getClass().getResourceAsStream(fileName);
+                    if(is == null){
+                        return super.loadClass(name);
+                    }
+                    byte[] b = new byte[is.available()];
+                    is.read(b);
+                    return defineClass(name,b,0,b.length);
+                } catch (IOException e) {
+                    throw new ClassNotFoundException(name);
+                }
+            }
+        };
+
+        Object obj = classLoader.loadClass("com.loader.ClassLoaderTest").newInstance();
+        System.out.println(obj.getClass()); //class com.loader.ClassLoaderTest
+        System.out.println(obj instanceof com.loader.ClassLoaderTest);  //false
+    }
+}
+
+```
+
+
+
+## 双亲委派模型
+
+​	![1567485687058](类加载器与双亲委派模型.assets\1567485687058.png)
+
+​	双亲由英文parent翻译而来，其实就是委派为父加载器处理，大部分java程序中，系统提供了三种类型的加载器：
+
+ 1. 启动类加载器（BootStrap ClassLoader）：负责加载<JAVA_HOME>\lib目录中rt.jar包中类或者被-Xbootclasspath所指定的路径中的并且是由虚拟机识别的类，用户无法获取启动类加载器的直接引用，Integer类就是在rt包中的，我们验证下前面说的属性
+	
+	```java
+	package com.loader;
+	
+	import java.io.IOException;
+	import java.io.InputStream;
+	
+	public class ClassLoaderTest {
+	    public static void main(String[] args) throws Exception{
+	        Integer i = 4;
+	        System.out.println(i.getClass().getClassLoader()); //null
+	    }
+	}
+	```
+	
+	> BootStrap ClassLoader是不能被获取的，所以为null
+	
+ 2. 拓展类加载器（Extension ClassLoader）：由sun.misc.Launcher$ExtClassLoader实现，负责加载<JAVA_HOME>\lib\ext目录中的类或者被java.ext.dirs系统变量多指定的路径中的所有类库，开发者可以直接使用。
+
+ 3. 应用程序类加载器（Application ClassLoader）：由sun.misc.Launcher$AppClassLoader实现，又称系统类加载器，因为ClassLoader.getSystemClassLoader()返回的ClassLoader就是AppClassLoader。它负责加载classpath上所指定的类库，开发者可以直接使用，若程序中没有自定义的加载器，默认的类加载器就是它。看下述程序，类加载器的层次结构为：BootStrapClassLoader>>ExtClassLoader>>AppClassLoader>>用户自定义加载器
+
+    ```java
+    package com.loader;
+    
+    import javax.jnlp.ServiceManager;
+    import java.io.IOException;
+    import java.io.InputStream;
+    
+    public class ClassLoaderTest {
+        public static void main(String[] args) throws Exception{
+    
+            ClassLoader c = ClassLoaderTest.class.getClassLoader();
+            while(c!=null){
+                System.out.println(c);
+                c = c.getParent();
+            }
+    
+            //系统类加载器
+            System.out.println("系统类加载器："+ClassLoader.getSystemClassLoader());
+    
+        }
+    }
+    ```
+
+    ```xml
+    sun.misc.Launcher$AppClassLoader@18b4aac2
+    sun.misc.Launcher$ExtClassLoader@4554617c
+    系统类加载器：sun.misc.Launcher$AppClassLoader@18b4aac2
+    ```
+
+双亲委派模型决定了类加载的过程，具体实现看java.lang.ClassLoader#loadClass(java.lang.String, boolean)方法：
+
+```java
+protected Class<?> loadClass(String name, boolean resolve)
+    throws ClassNotFoundException
+{
+    synchronized (getClassLoadingLock(name)) {
+        // First, check if the class has already been loaded
+        Class<?> c = findLoadedClass(name);
+        if (c == null) {
+            long t0 = System.nanoTime();
+            try {
+                if (parent != null) {
+                    c = parent.loadClass(name, false);
+                } else {
+                    c = findBootstrapClassOrNull(name);
+                }
+            } catch (ClassNotFoundException e) {
+                // ClassNotFoundException thrown if class not found
+                // from the non-null parent class loader
+            }
+
+            if (c == null) {
+                // If still not found, then invoke findClass in order
+                // to find the class.
+                long t1 = System.nanoTime();
+                c = findClass(name);
+
+                // this is the defining class loader; record the stats
+                sun.misc.PerfCounter.getParentDelegationTime().addTime(t1 - t0);
+                sun.misc.PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);
+                sun.misc.PerfCounter.getFindClasses().increment();
+            }
+        }
+        if (resolve) {
+            resolveClass(c);
+        }
+        return c;
+    }
+}
+```
+
+> 即从最顶层的Bootstrap ClassLoader查找起，父ClassLoader能加载则使用其加载，否则使用当前类加载器。

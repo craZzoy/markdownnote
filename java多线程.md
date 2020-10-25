@@ -1035,9 +1035,9 @@ Thread-0
 
 
 
-### volitile和JMM
+### volatile和JMM
 
-volitile的作用：
+volatile的作用：
 
 - 保证非复合原子操作
 
@@ -1094,7 +1094,7 @@ volitile的作用：
   
   ```
 
-  > 该程序在32位虚拟机中，long类型的数组操作不是原子性的（long是64位的），所以会有出现与赋的值与一样的情况，即long类型中的高32位和低32位未保证同一时刻赋值。
+  > 该程序在32位虚拟机中，long类型的数组操作不是原子性的（long是64位的），所以会有出现与赋的值不一样的情况，即long类型中的高32位和低32位未保证同一时刻赋值。
   >
   > 此时使用volatile关键字可解决这个问题
 
@@ -1190,7 +1190,7 @@ volitile的作用：
 
   > 上述例子中由于主线程修改的值不能被ReaderThread立刻看见，所以导致其一直阻塞在那。
   >
-  > 一般由于运行在client端引起的（通过-server JVM参数修改未运行在server端），但实际java8测试两种都一样
+  > 一般由于运行在client端引起的（通过-server JVM参数修改为运行在server端），但实际java8测试两种都一样
 
   通过对ready变量加入volatile关键字，可解决问题：
 
@@ -4345,6 +4345,71 @@ public class FutureMain {
 
 ### JDK中Future实现
 
+![image-20200918155940780](C:/Users/Lenovo/AppData/Roaming/Typora/typora-user-images/image-20200918155940780.png)
+
+示例代码：
+
+```java
+package com.concurrent.pattern.future.jdk;
+
+import java.util.Random;
+import java.util.concurrent.Callable;
+
+/**
+ * @Description: 真实数据
+ */
+public class RealData implements Callable<String> {
+
+    private String para;
+
+    public RealData(String para) {
+        this.para = para;
+    }
+
+    @Override
+    public String call() throws Exception {
+        //模拟构造数据很慢的过程
+        Random random  = new Random();
+        int size = random.nextInt() % 10;
+        StringBuffer buffer = new StringBuffer();
+        for (int i = 0; i < size; i++) {
+            buffer.append(para);
+        }
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return buffer.toString();
+    }
+}
+
+```
+
+```java
+package com.concurrent.pattern.future.jdk;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+
+/**
+ * @Description: 执行类
+ */
+public class Main {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        FutureTask task = new FutureTask(new RealData("name"));
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        executorService.submit(task);
+        System.out.println("数据"  + task.get());
+    }
+}
+
+```
+
+
+
 
 
 ## 并行流水线
@@ -4803,3 +4868,33 @@ public class CombineCompletableFuture {
 
 HashMap和ConcurrentHashMap的实现原理
 
+
+
+# JAVA中的锁
+
+https://mp.weixin.qq.com/s/kMyyHaDQn-Da8MTmpPUyfg
+
+![image-20200929144103120](java多线程.assets/image-20200929144103120.png)
+
+应用
+
+| 序号 | 锁名称   | 应用                                                         |
+| :--- | :------- | :----------------------------------------------------------- |
+| 1    | 乐观锁   | CAS                                                          |
+| 2    | 悲观锁   | synchronized、vector、hashtable                              |
+| 3    | 自旋锁   | CAS                                                          |
+| 4    | 可重入锁 | synchronized、Reentrantlock、Lock                            |
+| 5    | 读写锁   | ReentrantReadWriteLock，CopyOnWriteArrayList、CopyOnWriteArraySet |
+| 6    | 公平锁   | Reentrantlock(true)                                          |
+| 7    | 非公平锁 | synchronized、reentrantlock(false)                           |
+| 8    | 共享锁   | ReentrantReadWriteLock中读锁                                 |
+| 9    | 独占锁   | synchronized、vector、hashtable、ReentrantReadWriteLock中写锁 |
+| 10   | 重量级锁 | synchronized                                                 |
+| 11   | 轻量级锁 | 锁优化技术                                                   |
+| 12   | 偏向锁   | 锁优化技术                                                   |
+| 13   | 分段锁   | concurrentHashMap                                            |
+| 14   | 互斥锁   | synchronized                                                 |
+| 15   | 同步锁   | synchronized                                                 |
+| 16   | 死锁     | 相互请求对方的资源                                           |
+| 17   | 锁粗化   | 锁优化技术                                                   |
+| 18   | 锁消除   | 锁优化技术                                                   |

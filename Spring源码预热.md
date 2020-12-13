@@ -297,6 +297,8 @@ AOP(Aspect Oriented Programming)，是OOP的延续，通过预编译和运行时
 - 目标对象：被代理的对象
 - AOP代理：具体的代理对象，Spring中有两种代理，一是JDK动代理，二是CGLib代理，默认使用JDK代理，可设置<aop-config>的proxy-target-class属性为true来使用CGLib代理
 
+![image-20201125085713964](Spring源码预热.assets/image-20201125085713964.png)
+
 ## 示例
 
 通知的示例

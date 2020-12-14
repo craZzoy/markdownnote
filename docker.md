@@ -229,6 +229,7 @@ https://docs.docker.com/install/linux/docker-ce/centos/
     device-mapper-persistent-data \
     lvm2
     
+# https://14fmh396.mirror.aliyuncs.com
 04 设置docker仓库  [设置阿里云镜像仓库可以先自行百度，后面课程也会有自己的docker hub讲解]	
 	sudo yum-config-manager \
       --add-repo \

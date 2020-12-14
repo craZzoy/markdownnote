@@ -2368,6 +2368,15 @@ BASE理论
 
 
 
+
+
+# Spring Cloud Feign使用和拓展
+
+- Open Feign
+- Spring Cloud Open Fiegn
+
+
+
 # 服务调用与熔断
 
 ## 核心概念
@@ -2864,3 +2873,75 @@ public @interface EnableFeignClients {
 入门示例：ch7-2-zuul-server，ch7-2-client-a，eureka-server-demo
 
 ![1589380298240](springcloud.assets\1589380298240.png)
+
+
+
+## Zuul典型配置
+
+### 路由配置
+
+#### 路由配置简化及规则
+
+- 单实例serviceId映射
+
+  前面示例中的配置如下：
+
+  ```yaml
+  zuul:
+    routes:
+      client-a:
+        path: /client/** #以此开头的请求映射到client-a(application-name)
+        serviceId: client-a
+  ```
+
+  这是一个`/client/**`到`client-a`服务的映射规则，其可以简化为
+
+  ```yaml
+  zuul:
+    routes:
+      client-a: /client/**
+  ```
+
+  前面甚至还可以简化为：
+
+  ```yaml
+  zuul:
+    routes:
+      client-a: 
+  ```
+
+  这种情况下，zuul默认会为client-a服务添加一个默认的映射规则：/client-a/**，相当于：
+
+  ```yaml
+  zuul:
+    routes:
+      client-a: /client-a/**
+  ```
+
+- 单实例url映射
+
+  ```yaml
+  zuul:
+    routes:
+      client-a:
+        path: /client/**
+        url: http://localhost:7070
+  ```
+
+- 多实例路由
+
+- 
+
+
+
+#### 路由通配符
+
+| 规则 | 释义               | 例子                 |
+| ---- | ------------------ | -------------------- |
+| /**  | 匹配任意字符和路径 | /client,/client/a    |
+| /*   | 只匹配任意字符     | /aaa,/bbb            |
+| /?   | 匹配单个字符       | /client/a, /client/b |
+
+
+
+### 功能配置

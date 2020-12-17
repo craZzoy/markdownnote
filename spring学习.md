@@ -506,20 +506,197 @@ ApplicationContext和BeanFactory谁才是IOC容器
 
 
 
+IDEA UML类图使用
+
+https://blog.csdn.net/zj420964597/article/details/87856758
+
+https://www.cnblogs.com/LDZZDL/p/9061603.html
+
+
+
 ## Spring IOC容器的生命周期
 
-1. 启动
+1. 启动：org.springframework.context.support.AbstractApplicationContext#refresh
+
+   ```java
+   	@Override
+   	public void refresh() throws BeansException, IllegalStateException {
+   		synchronized (this.startupShutdownMonitor) {
+   			// Prepare this context for refreshing.
+   			prepareRefresh();
+   
+   			// Tell the subclass to refresh the internal bean factory.
+   			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+   
+   			// Prepare the bean factory for use in this context.
+   			prepareBeanFactory(beanFactory);
+   
+   			try {
+   				// Allows post-processing of the bean factory in context subclasses.
+   				postProcessBeanFactory(beanFactory);
+   
+   				// Invoke factory processors registered as beans in the context.
+   				invokeBeanFactoryPostProcessors(beanFactory);
+   
+   				// Register bean processors that intercept bean creation.
+   				registerBeanPostProcessors(beanFactory);
+   
+   				// Initialize message source for this context.
+   				initMessageSource();
+   
+   				// Initialize event multicaster for this context.
+   				initApplicationEventMulticaster();
+   
+   				// Initialize other special beans in specific context subclasses.
+   				onRefresh();
+   
+   				// Check for listener beans and register them.
+   				registerListeners();
+   
+   				// Instantiate all remaining (non-lazy-init) singletons.
+   				finishBeanFactoryInitialization(beanFactory);
+   
+   				// Last step: publish corresponding event.
+   				finishRefresh();
+   			}
+   
+   			catch (BeansException ex) {
+   				if (logger.isWarnEnabled()) {
+   					logger.warn("Exception encountered during context initialization - " +
+   							"cancelling refresh attempt: " + ex);
+   				}
+   
+   				// Destroy already created singletons to avoid dangling resources.
+   				destroyBeans();
+   
+   				// Reset 'active' flag.
+   				cancelRefresh(ex);
+   
+   				// Propagate exception to caller.
+   				throw ex;
+   			}
+   
+   			finally {
+   				// Reset common introspection caches in Spring's core, since we
+   				// might not ever need metadata for singleton beans anymore...
+   				resetCommonCaches();
+   			}
+   		}
+   	}
+   ```
+
+   
+
 2. 运行
-3. 停止
+
+3. 停止：org.springframework.context.support.AbstractApplicationContext#close
+
+   ```java
+   	@Override
+   	public void close() {
+   		synchronized (this.startupShutdownMonitor) {
+   			doClose();
+   			// If we registered a JVM shutdown hook, we don't need it anymore now:
+   			// We've already explicitly closed the context.
+   			if (this.shutdownHook != null) {
+   				try {
+   					Runtime.getRuntime().removeShutdownHook(this.shutdownHook);
+   				}
+   				catch (IllegalStateException ex) {
+   					// ignore - VM is already shutting down
+   				}
+   			}
+   		}
+   	}
+   ```
+
+   > applicationContextd关闭时调用了通用关闭资源的方法，还删除了当前应用中关闭钩子，关于关闭钩子，可参考https://www.cnblogs.com/maxstack/p/9112711.html
+
+   
 
 
 
 ## 面试题
 
+1. 什么是Spring IOC容器
+2. BeanFactory和FactoryBean
+3. Spring IOC容器启动时做了哪些准备
+
 
 
 # Spring Bean基础
 
-Bean实例化
+## BeanDefinition接口
 
-Bean初始化
+beanDefinition接口是Spring FrameWork提供的定义Bean的配置元信息接口，其中包含信息：
+
+- Bean名称
+- Bean行为配置元素，如作用域、自动绑定的方式、声明周期的回调等
+- 其他Bean引用
+  - 合作者（collaborators）
+  - 依赖（dependencies）
+- 配置设置，如Bean属性（properties）
+- 其他
+
+![image-20201216101927357](spring学习.assets/image-20201216101927357.png)
+
+
+
+## BeanDefinition元信息
+
+| 属性（Property）         | 说明                                          |
+| ------------------------ | --------------------------------------------- |
+| Class                    | Bean 全类名，必须是具体类，不能用抽象类或接口 |
+| Name                     | Bean 的名称或者 ID                            |
+| Scope                    | Bean 的作用域（如：singleton、 prototype 等） |
+| Constructor arguments    | Bean 构造器参数（用于依赖注入）               |
+| Properties               | Bean 属性设置（用于依赖注入）                 |
+| Autowiring mode          | Bean 自动绑定模式（如：通过名称 byName）      |
+| Lazy initialization mode | Bean 延迟初始化模式（延迟和非延迟）           |
+| Initialization method    | Bean 初始化回调方法名称                       |
+| Destruction method       | Bean 销毁回调方法名称                         |
+
+BeanDefinition创建方式
+
+- 通过 BeanDefinitionBuilder  
+- 通过 AbstractBeanDefinition 以及派生类  
+
+```java
+package org.geekbang.thinking.in.spring.bean.definition;
+
+import org.geekbang.thinking.in.spring.bean.domain.User;
+import org.springframework.beans.MutablePropertyValues;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.support.AbstractBeanDefinition;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.GenericBeanDefinition;
+
+/**
+ * @Description: BeanDefinition创建demo
+ *
+ */
+public class BeanDefinitionGenerationDemo {
+
+    public static void main(String[] args) {
+        //1、通过BeanDefinitionBuilder构建
+        BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(User.class);
+        //设置Bean属性
+        beanDefinitionBuilder.addPropertyValue("id", 1);
+        beanDefinitionBuilder.addPropertyValue("name", "JackMa");
+        //获取BeanDefinition
+        BeanDefinition beanDefinition = beanDefinitionBuilder.getBeanDefinition();
+        System.out.println(beanDefinition.getBeanClassName());
+
+
+        //2、通过AbstractBeanDefinition构建
+        final GenericBeanDefinition genericBeanDefinition = new GenericBeanDefinition();
+        genericBeanDefinition.setBeanClass(User.class);
+        MutablePropertyValues mutablePropertyValues = new MutablePropertyValues();
+        mutablePropertyValues.addPropertyValue("id", 1);
+        mutablePropertyValues.addPropertyValue("name", "JackMa");
+        genericBeanDefinition.setPropertyValues(mutablePropertyValues);
+    }
+
+}
+```
+

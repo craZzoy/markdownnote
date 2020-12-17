@@ -398,3 +398,29 @@ echo "Hello World !"
 
 ### shell参数传递
 
+
+
+
+
+
+
+查看缓存：
+`free -m`
+
+```bash
+# 释放缓存区内存的方法
+
+1）清理pagecache（页面缓存）
+
+# echo 1 > /proc/sys/vm/drop_caches     或者 # sysctl -w vm.drop_caches=1
+
+2）清理dentries（目录缓存）和inodes
+
+# echo 2 > /proc/sys/vm/drop_caches     或者 # sysctl -w vm.drop_caches=2
+
+3）清理pagecache、dentries和inodes
+
+# echo 3 > /proc/sys/vm/drop_caches     或者 # sysctl -w vm.drop_caches=3
+
+注：上面三种方式都是临时释放缓存的方法，要想永久释放缓存，需要在/etc/sysctl.conf文件中配置：vm.drop_caches=1/2/3，然后sysctl -p生效即可！
+```

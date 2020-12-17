@@ -748,3 +748,72 @@ protected Class<?> loadClass(String name, boolean resolve)
 ```
 
 > 即从最顶层的Bootstrap ClassLoader查找起，父ClassLoader能加载则使用其加载，否则使用当前类加载器。
+
+
+
+
+
+# JVM相关参数查看
+
+1. gc（full gc，minor gc...）类型及gc发生时间
+2. JDK各版本的运行时数据区及内存模型】
+3. JVM信息参数查看
+
+
+
+jhsdb jmap --heap --pid 1
+
+```txt
+Attaching to process ID 1, please wait...
+Debugger attached successfully.
+Server compiler detected.
+JVM version is 11.0.8+10-LTS
+
+using thread-local object allocation.
+Mark Sweep Compact GC
+
+Heap Configuration:
+   MinHeapFreeRatio         = 40
+   MaxHeapFreeRatio         = 70
+   MaxHeapSize              = 2147483648 (2048.0MB)
+   NewSize                  = 715784192 (682.625MB)
+   MaxNewSize               = 715784192 (682.625MB)
+   OldSize                  = 1431699456 (1365.375MB)
+   NewRatio                 = 2
+   SurvivorRatio            = 8
+   MetaspaceSize            = 21807104 (20.796875MB)
+   CompressedClassSpaceSize = 1073741824 (1024.0MB)
+   MaxMetaspaceSize         = 17592186044415 MB
+   G1HeapRegionSize         = 0 (0.0MB)
+
+Heap Usage:
+New Generation (Eden + 1 Survivor Space):
+   capacity = 644218880 (614.375MB)
+   used     = 505948016 (482.50962829589844MB)
+   free     = 138270864 (131.86537170410156MB)
+   78.53666381215031% used
+Eden Space:
+   capacity = 572653568 (546.125MB)
+   used     = 490390896 (467.67320251464844MB)
+   free     = 82262672 (78.45179748535156MB)
+   85.63482765202993% used
+From Space:
+   capacity = 71565312 (68.25MB)
+   used     = 15557120 (14.83642578125MB)
+   free     = 56008192 (53.41357421875MB)
+   21.738352793040292% used
+To Space:
+   capacity = 71565312 (68.25MB)
+   used     = 0 (0.0MB)
+   free     = 71565312 (68.25MB)
+   0.0% used
+tenured generation:
+   capacity = 1431699456 (1365.375MB)
+   used     = 635439680 (606.0025024414062MB)
+   free     = 796259776 (759.3724975585938MB)
+   44.38359442947221% used
+
+```
+
+
+

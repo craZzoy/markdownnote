@@ -519,3 +519,7 @@ ApplicationContext和BeanFactory谁才是IOC容器
 
 
 # Spring Bean基础
+
+Bean实例化
+
+Bean初始化

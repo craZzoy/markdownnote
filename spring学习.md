@@ -700,3 +700,6 @@ public class BeanDefinitionGenerationDemo {
 }
 ```
 
+
+
+学习：深入到规范，如JSR规范、Servlet规范等

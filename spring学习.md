@@ -656,10 +656,10 @@ beanDefinition接口是Spring FrameWork提供的定义Bean的配置元信息接�
 | Initialization method    | Bean 初始化回调方法名称                       |
 | Destruction method       | Bean 销毁回调方法名称                         |
 
-BeanDefinition创建方式
+### 原生BeanDefinition创建方式
 
 - 通过 BeanDefinitionBuilder  
-- 通过 AbstractBeanDefinition 以及派生类  
+- 通过 AbstractBeanDefinition 以及派生类 
 
 ```java
 package org.geekbang.thinking.in.spring.bean.definition;
@@ -699,6 +699,270 @@ public class BeanDefinitionGenerationDemo {
 
 }
 ```
+
+
+
+### 使用Annotation使上下文自动创建BeanDefinition
+
+```java
+package org.geekbang.thinking.in.spring.bean.definition;
+
+import com.geekbang.ioc.overview.dependency.domain.User;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.stereotype.Component;
+
+/**
+ * @Description: 注解BeanDefinition demo
+ * @Author :
+ * @Date : 15:00 2020/12/16
+ */
+@Import(AnnotationBeanDefinitionDemo.Config.class)
+public class AnnotationBeanDefinitionDemo {
+
+    public static void main(String[] args) {
+        //创建Bean容器
+        final AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        //注册配置Bean
+        context.register(AnnotationBeanDefinitionDemo.class);
+        //启动应用上下文
+        context.refresh();
+        System.out.println("user 类型的所有Bean：" + context.getBeansOfType(User.class));
+        //关闭上下文
+        context.close();
+
+    }
+
+
+    @Component
+    public static class Config {
+
+        @Bean
+        public User user (){
+            User user1 = new User();
+            user1.setName("杰克马");
+            user1.setAge(35);
+            return user1;
+        }
+        
+    }
+
+}
+
+```
+
+
+
+
+
+
+
+## 命名Spring Bean
+
+### Bean名称
+
+每个 Bean 拥有一个或多个标识符（identifiers），这些标识符在 Bean 所在的容器必须是唯一
+的。通常，一个 Bean 仅有一个标识符，如果需要额外的，可考虑使用别名（Alias）来扩充。
+在基于 XML 的配置元信息中，开发人员可用 id 或者 name 属性来规定 Bean 的 标识符。通常
+Bean 的 标识符由字母组成，允许出现特殊字符。如果要想引入 Bean 的别名的话，可在
+name 属性使用半角逗号（“,”）或分号（“;”) 来间隔。
+Bean 的 id 或 name 属性并非必须制定，如果留空的话，容器会为 Bean 自动生成一个唯一的
+名称。Bean 的命名尽管没有限制，不过官方建议采用驼峰的方式，更符合 Java 的命名约定  
+
+通过BeanDefinition生成命名和非命名Bean：
+
+```java
+package org.geekbang.thinking.in.spring.bean.definition;
+
+import com.geekbang.ioc.overview.dependency.domain.User;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.util.StringUtils;
+
+/**
+ * @Description: 命名Bean Demo
+ * @Author : 
+ * @Date : 10:05 2020/12/21
+ */
+public class NamedBeanDemo {
+
+    public static void main(String[] args) {
+        //创建Bean容器
+        final AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        //通过BeanDefinition API注册Bean
+        //命名注册Bean
+        registerUserBeanDefinition(context, "naming-user");
+        //非命名注册Bean
+        registerUserBeanDefinition(context, null);
+        //启动应用上下文
+        context.refresh();
+        System.out.println("user 类型的所有Bean：" + context.getBeansOfType(User.class));
+        //关闭上下文
+        context.close();
+
+    }
+
+
+    public static void registerUserBeanDefinition(BeanDefinitionRegistry registry, String name){
+        final BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(User.class);
+        beanDefinitionBuilder
+                .addPropertyValue("id", 1)
+                .addPropertyValue("name", "JackMa");
+        if (StringUtils.hasText(name)){
+            //命名注册Bean
+            registry.registerBeanDefinition(name,beanDefinitionBuilder.getBeanDefinition());
+        } else {
+            //非命名注册Bean
+            BeanDefinitionReaderUtils.registerWithGeneratedName(beanDefinitionBuilder.getBeanDefinition(), registry);
+        }
+    }
+
+}
+
+```
+
+> user 类型的所有Bean：{naming-user=User{id=1, name='JackMa', age=null}, com.geekbang.ioc.overview.dependency.domain.User#0=User{id=1, name='JackMa', age=null}}
+
+
+
+### Bean名称生成器
+
+- org.springframework.beans.factory.support.BeanNameGenerato（since 2.0.3）：
+
+  ```java
+  /*
+   * Copyright 2002-2007 the original author or authors.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *      https://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  
+  package org.springframework.beans.factory.support;
+  
+  import org.springframework.beans.factory.config.BeanDefinition;
+  
+  /**
+   * Strategy interface for generating bean names for bean definitions.
+   *
+   * @author Juergen Hoeller
+   * @since 2.0.3
+   */
+  public interface BeanNameGenerator {
+  
+  	/**
+  	 * Generate a bean name for the given bean definition.
+  	 * @param definition the bean definition to generate a name for
+  	 * @param registry the bean definition registry that the given definition
+  	 * is supposed to be registered with
+  	 * @return the generated bean name
+  	 */
+  	String generateBeanName(BeanDefinition definition, BeanDefinitionRegistry registry);
+  
+  }
+  
+  ```
+
+  其中generateBeanName()方法中使用的BeanDefinitionRegistry类提供了对容器中BeanDefinition做一些操作的API：
+
+  ![image-20201221110359652](spring学习.assets/image-20201221110359652.png)
+
+  > 一般IOC容器（BeanFactory和ApplicationContext）实现都会实现这个接口
+
+  - org.springframework.beans.factory.support.DefaultBeanNameGenerator（since 2.0.3）：适用于普通的Beandefinition，未指定名称时调用
+  - org.springframework.context.annotation.AnnotationBeanNameGenerator（since 2.5）：适用于org.springframework.beans.factory.annotation.AnnotatedBeanDefinition类型的Beandefinition，注解生成的Bean调用
+
+
+
+## Bean别名
+
+- Bean 别名（Alias）的价值
+
+  - 复用现有的 BeanDefinition
+
+  - 更具有场景化的命名方法，比如：
+    <alias name="myApp-dataSource" alias="subsystemA-dataSource"/>
+    <alias name="myApp-dataSource" alias="subsystemB-dataSource"/>  
+
+    ```java
+    @Bean(name = {"myApp-dataSource", "subsystemA-dataSource"})
+    ```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <import resource="classpath:/META-INF/dependency-lookup-context.xml"/>
+    
+    <alias name="user" alias="alias-test-user"/>
+    <alias name="user" alias="alias-test-user1" />
+
+    <bean class="com.geekbang.ioc.overview.dependency.domain.User" />
+
+</beans>
+
+```
+
+```java
+package org.geekbang.thinking.in.spring.bean.definition;
+
+import com.geekbang.ioc.overview.dependency.domain.User;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import java.util.Arrays;
+
+/**
+ * @Description: 别名Bean demo
+ * @Author : 
+ * @Date : 10:08 2020/12/21
+ */
+public class BeanAliasDemo {
+
+    public static void main(String[] args) {
+        BeanFactory beanFactory = new ClassPathXmlApplicationContext("classpath:/META-INF/bean-definitions-context.xml");
+        final User user = beanFactory.getBean("user", User.class);
+        //通过别名获取Bean
+        final User user1 = beanFactory.getBean("alias-test-user", User.class);
+        System.out.println(Arrays.asList(beanFactory.getAliases("user")));
+        System.out.println("user == alias-test-user : " + (user == user1));
+    }
+
+}
+
+```
+
+> [alias-test-user, alias-test-user1]
+> user == alias-test-user : true
+
+
+
+
+
+## 注册Spring Bean
+
+- Beandefinition注册
+- 外部单例对象注册
+
+
+
+
+
+
 
 
 

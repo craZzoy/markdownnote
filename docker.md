@@ -688,9 +688,6 @@ docker run -d --name user01 -p 6661:8080 registry.cnhangzhou.aliyuncs.com/itcraz
 
 ```properties
 (1)访问github上的harbor项目
-咕泡学院 只为更好地你2.1.5 Image常见操作
-2.2 深入探讨Container
-既然container是由image运行起来的，那么是否可以理解为container和image有某种关系？
 https://github.com/goharbor/harbor
 (2)下载版本，比如1.7.1
 https://github.com/goharbor/harbor/releases

@@ -138,3 +138,39 @@ firefox：GeckoDriver
 - domain：domain object，可认为是do（与数据库对应）
 - vo：view object
 - query：query object
+
+
+
+
+
+2020/12/25
+
+周志明架构探索 https://icyfenix.cn/exploration/guide/quick-start.html
+
+go语言学习 https://www.runoob.com/go/go-constants.html
+
+service mesh https://www.servicemesher.com/istio-handbook/
+
+
+
+
+
+轻流：
+
+https://www.kdocs.cn/view/l/cobifGYeAFeq
+
+https://qingflow.com/help/docs/5f48701721f11600160916b7
+
+
+
+
+
+
+
+# Rust
+
+
+
+# GoLang
+
+golang实现sock5代理服务器

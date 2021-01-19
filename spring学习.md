@@ -956,11 +956,147 @@ public class BeanAliasDemo {
 ## 注册Spring Bean
 
 - Beandefinition注册
+
+  - XML 配置元信息
+
+    -  <bean name=”...” ... />
+
+  -  Java 注解配置元信息
+
+    - @Bean
+    - @Component
+    - @Import
+
+  -  Java API 配置元信息
+
+    - 命名方式：BeanDefinitionRegistry#registerBeanDefinition(String,BeanDefinition)
+
+    - 非命名方式：BeanDefinitionReaderUtils#registerWithGeneratedName(AbstractBeanDefinition,Be
+      anDefinitionRegistry)
+
+    - 配置类方式：AnnotatedBeanDefinitionReader#register(Class...)  
+
+      ```java
+      package org.geekbang.thinking.in.spring.bean.definition;
+      
+      import com.geekbang.ioc.overview.dependency.domain.User;
+      import org.springframework.context.annotation.AnnotatedBeanDefinitionReader;
+      import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+      import org.springframework.context.annotation.Bean;
+      import org.springframework.stereotype.Component;
+      
+      import java.util.Map;
+      
+      /**
+       * AnnotatedBeanDefinitionReader demo
+       */
+      public class AnnotatedBeanDefinitionReaderDemo {
+      
+          public static void main(String[] args) {
+              AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+              AnnotatedBeanDefinitionReader beanDefinitionReader = new AnnotatedBeanDefinitionReader(context);
+              beanDefinitionReader.register(Config.class);
+              context.refresh();
+              Map<String, User> beansOfType = context.getBeansOfType(User.class);
+              System.out.println(beansOfType);
+              context.close();
+          }
+      
+      
+          @Component
+          public static class Config {
+      
+              @Bean(name = {"user", "user-alias"})
+              public User user (){
+                  User user1 = new User();
+                  user1.setName("杰克马");
+                  user1.setAge(35);
+                  return user1;
+              }
+          }
+      }
+      
+      ```
+
+  > {user=User{id=null, name='杰克马', age=35}}
+
 - 外部单例对象注册
 
+  - Java API 配置元信息
+    
+    - SingletonBeanRegistry#registerSingleton  
+    
+    ```java
+    package org.geekbang.thinking.in.spring.bean.definition;
+    
+    
+    import org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory;
+    import org.geekbang.thinking.in.spring.bean.factory.UserFactory;
+    import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+    import org.springframework.beans.factory.config.SingletonBeanRegistry;
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    /**
+     * 外部化单例Bean注册 demo
+     * 即先手动创建Bean，然后注册到Spring上下文中
+     */
+    public class SingleBeanRegistionDemo {
+    
+        public static void main(String[] args) {
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+            SingletonBeanRegistry beanFactory = context.getBeanFactory();
+            UserFactory userFactory = new DefaultUserFactory();
+    
+            //注册外部单例对象，外部单例指外部手动创建的、不由IOC控制创建（通过BeanDefinition创建）过程的Bean
+            beanFactory.registerSingleton("userFactory", userFactory);
+    
+            context.refresh();
+    
+            UserFactory bean = context.getBean(UserFactory.class);
+            System.out.println(bean);
+            System.out.println("bean == userFactory : " + (bean == userFactory));
+    
+            context.close();
+        }
+    
+    }
+    
+    ```
+    
+    > org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory@150c158
+    > bean == userFactory : true
 
 
 
+## 实例化Bean
+
+- 常规方式
+  - 通过构造器（配置元信息：XML、Java 注解和 Java API  )
+    - XML方式
+      - 
+    - JAVA注解
+    - JAVA API
+  - 通过静态工厂方法（配置元信息：XML和 Java API  )
+  - 通过Bean工厂方法（配置元信息：XML和 Java API  )
+  - 通过FactoryBean（配置元信息：XML、Java 注解和 Java API  )
+- 特殊方式
+  - 通过 ServiceLoaderFactoryBean（配置元信息：XML、Java 注解和 Java API ）  
+  - 通过 AutowireCapableBeanFactory#createBean(java.lang.Class, int, boolean)  
+  - 通过 BeanDefinitionRegistry#registerBeanDefinition(String,BeanDefinition)  
+
+
+
+## 初始化Bean
+
+
+
+
+
+## 销毁Spring Bean
+
+
+
+## 垃圾回收Bean
 
 
 

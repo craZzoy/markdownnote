@@ -2855,6 +2855,28 @@ public @interface EnableFeignClients {
 
 
 
+# Spring Cloud Ribbon
+
+负载均衡：
+
+- 客户端负载均衡（进程内负载均衡）
+
+  ![image-20210214231352998](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\image-20210214231352998.png)
+
+- 服务端负载均衡（集中式负载均衡）
+
+  ![image-20210214231340361](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\image-20210214231340361.png)
+
+  - Nginx
+  - Lvs
+  - F5
+
+官网描述：
+
+![image-20210214231444618](D:\BaiduNetdiskDownload\markdown笔记\springcloud.assets\image-20210214231444618.png)
+
+
+
 # Spring Cloud Zuul
 
 应用方面：动态路由、监控、弹性、服务治理、编排、安全。zuul可以简单看成应用的前置处理器：
@@ -2945,3 +2967,27 @@ public @interface EnableFeignClients {
 
 
 ### 功能配置
+
+
+
+
+
+# Spring cloud认证和鉴权
+
+## JWT
+
+Jwt(json web token)，是目前最流行的跨域认证解决方案。Jwt数据结构分为三部分，
+
+- Header（头部）
+- Payload（负载）
+- Signature（签名）
+
+三部分由符号.分隔，`Header.Payload.Signature`
+
+http://www.ruanyifeng.com/blog/2018/07/json_web_token-tutorial.html
+
+
+
+
+
+# Spring Cloud Gateway

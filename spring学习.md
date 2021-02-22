@@ -631,7 +631,7 @@ https://www.cnblogs.com/LDZZDL/p/9061603.html
 beanDefinition接口是Spring FrameWork提供的定义Bean的配置元信息接口，其中包含信息：
 
 - Bean名称
-- Bean行为配置元素，如作用域、自动绑定的方式、声明周期的回调等
+- Bean行为配置元素，如作用域、自动绑定的方式、生命周期的回调等
 - 其他Bean引用
   - 合作者（collaborators）
   - 依赖（dependencies）
@@ -1071,32 +1071,736 @@ public class BeanAliasDemo {
 ## 实例化Bean
 
 - 常规方式
+
   - 通过构造器（配置元信息：XML、Java 注解和 Java API  )
     - XML方式
-      - 
     - JAVA注解
     - JAVA API
   - 通过静态工厂方法（配置元信息：XML和 Java API  )
-  - 通过Bean工厂方法（配置元信息：XML和 Java API  )
+  - 通过Bean（实例化）工厂方法（配置元信息：XML和 Java API  )
   - 通过FactoryBean（配置元信息：XML、Java 注解和 Java API  )
+
+  User.class：
+
+  ```java
+  package com.geekbang.ioc.overview.dependency.domain;
+  
+  public class User {
+  
+      private Integer id;
+  
+      private String name;
+  
+      private Integer age;
+  
+      public Integer getId() {
+          return id;
+      }
+  
+      public void setId(Integer id) {
+          this.id = id;
+      }
+  
+      public String getName() {
+          return name;
+      }
+  
+      public void setName(String name) {
+          this.name = name;
+      }
+  
+      public Integer getAge() {
+          return age;
+      }
+  
+      public void setAge(Integer age) {
+          this.age = age;
+      }
+  
+      public static User createUser(){
+          User user = new User();
+          user.setName("Tom Cat");
+          user.setId(10);
+          user.setAge(12);
+          return user;
+      }
+  
+      @Override
+      public String toString() {
+          return "User{" +
+                  "id=" + id +
+                  ", name='" + name + '\'' +
+                  ", age=" + age +
+                  '}';
+      }
+  }
+  
+  ```
+
+  UserFactory接口：
+
+  ```java
+  package org.geekbang.thinking.in.spring.bean.factory;
+  
+  import com.geekbang.ioc.overview.dependency.domain.User;
+  
+  public interface UserFactory {
+  
+      default User createUser(){
+          return User.createUser();
+      }
+  
+  }
+  
+  ```
+
+  UserFactory接口实现类：
+
+  ```java
+  package org.geekbang.thinking.in.spring.bean.factory;
+  
+  import com.geekbang.ioc.overview.dependency.domain.User;
+  
+  public class DefaultUserFactory implements UserFactory {
+  }
+  
+  ```
+
+  
+
+  UserFactoryBean：
+
+  ```java
+  package org.geekbang.thinking.in.spring.bean.factory;
+  
+  import com.geekbang.ioc.overview.dependency.domain.User;
+  import org.springframework.beans.factory.FactoryBean;
+  
+  public class UserFactoryBean implements FactoryBean<User> {
+      @Override
+      public User getObject() throws Exception {
+          return User.createUser();
+      }
+  
+      @Override
+      public Class<?> getObjectType() {
+          return User.class;
+      }
+  }
+  
+  ```
+
+  
+
+  
+
+  ```xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <beans xmlns="http://www.springframework.org/schema/beans"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.springframework.org/schema/beans
+          https://www.springframework.org/schema/beans/spring-beans.xsd">
+  
+      <!-- 构造器实例化 -->
+      <bean id="user-by-constructor-method" class="com.geekbang.ioc.overview.dependency.domain.User"/>
+  
+      <!-- 静态工厂实例化 -->
+      <bean id = "user-by-static-method" class="com.geekbang.ioc.overview.dependency.domain.User" factory-method="createUser" />
+  
+      <!-- 实例（bean）方法实例化bean -->
+      <bean id="user-by-instance-bean" factory-bean="userFactory" factory-method="createUser" />
+  
+      <!-- 根据factorybean实例化 -->
+      <bean id = "user-by-factory-bean" class="org.geekbang.thinking.in.spring.bean.factory.UserFactoryBean" />
+  
+  
+      <bean id="userFactory" class="org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory" />
+  
+  
+  </beans>
+  ```
+
+  ```java
+  package org.geekbang.thinking.in.spring.bean.definition;
+  
+  import com.geekbang.ioc.overview.dependency.domain.User;
+  import org.springframework.beans.factory.BeanFactory;
+  import org.springframework.context.support.ClassPathXmlApplicationContext;
+  
+  /**
+   * Bean实例化 demo
+   */
+  public class BeanInstantiationDemo {
+  
+      public static void main(String[] args) {
+          BeanFactory factory = new ClassPathXmlApplicationContext
+                  ("classpath:/META-INF/bean-instantination-context.xml");
+  
+          User userByConstructorMethod = factory.getBean("user-by-constructor-method", User.class);
+          User userByStaticMethod = factory.getBean("user-by-static-method", User.class);
+          User userByInstanceBean = factory.getBean("user-by-instance-bean", User.class);
+          User userByFactoryBean = factory.getBean("user-by-factory-bean", User.class);
+  
+          System.out.println(userByConstructorMethod);
+          System.out.println(userByStaticMethod);
+          System.out.println(userByInstanceBean);
+          System.out.println(userByFactoryBean);
+  
+          System.out.println(userByStaticMethod == userByInstanceBean);
+          System.out.println(userByStaticMethod == userByFactoryBean);
+  
+      }
+  
+  }
+  
+  ```
+
+  >User{id=null, name='null', age=null}
+  >User{id=10, name='Tom Cat', age=12}
+  >User{id=10, name='Tom Cat', age=12}
+  >User{id=10, name='Tom Cat', age=12}
+  >false
+  >false
+
 - 特殊方式
+
   - 通过 ServiceLoaderFactoryBean（配置元信息：XML、Java 注解和 Java API ）  
   - 通过 AutowireCapableBeanFactory#createBean(java.lang.Class, int, boolean)  
   - 通过 BeanDefinitionRegistry#registerBeanDefinition(String,BeanDefinition)  
 
+  示例：
 
+  classpath:/META-INF/services路径下新增文件org.geekbang.thinking.in.spring.bean.factory.UserFactory：
+
+  ```txt
+  org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory
+  org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory
+  org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactoryTwo
+  ```
+
+  special-bean-instantination-context.xml：
+
+  ```xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <beans xmlns="http://www.springframework.org/schema/beans"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.springframework.org/schema/beans
+          https://www.springframework.org/schema/beans/spring-beans.xsd">
+  
+      <bean id = "userFactoryServiceLoader" class="org.springframework.beans.factory.serviceloader.ServiceLoaderFactoryBean" >
+          <property name="serviceType" value="org.geekbang.thinking.in.spring.bean.factory.UserFactory"/>
+          <property name="singleton" value="true" />
+      </bean>
+  
+  
+  </beans>
+  
+  ```
+
+  ```java
+  package org.geekbang.thinking.in.spring.bean.definition;
+  
+  import org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory;
+  import org.geekbang.thinking.in.spring.bean.factory.UserFactory;
+  import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+  import org.springframework.context.ApplicationContext;
+  import org.springframework.context.support.ClassPathXmlApplicationContext;
+  
+  import java.util.Iterator;
+  import java.util.ServiceLoader;
+  
+  /**
+   * 特殊Bean实例化demo
+   */
+  public class SpecialBeanInstantiationDemo {
+  
+      public static void main(String[] args) {
+  
+          //通过jdk api @{java.util.ServiceLoader} 查找 ServiceLoader
+          ServiceLoader serviceLoader = demoServiceLoader();
+  
+          //将ServiceLoader交给Spring IOC管理
+          ApplicationContext context = new ClassPathXmlApplicationContext("classpath:/META-INF/special-bean-instantination-context.xml");
+  
+          ServiceLoader<UserFactory> userFactoryServiceLoader = context.getBean("userFactoryServiceLoader", ServiceLoader.class);
+          ServiceLoader<UserFactory> userFactoryServiceLoaderTwo = context.getBean("userFactoryServiceLoader", ServiceLoader.class);
+          System.out.println(userFactoryServiceLoader == userFactoryServiceLoaderTwo);
+          displayServiceLoader(userFactoryServiceLoader);
+  
+          System.out.println(serviceLoader == userFactoryServiceLoader);
+  
+  
+          //通过 AutowireCapableBeanFactory#createBean(java.lang.Class, int, boolean)实例化
+          AutowireCapableBeanFactory autowireCapableBeanFactory = context.getAutowireCapableBeanFactory();
+          UserFactory bean = autowireCapableBeanFactory.createBean(DefaultUserFactory.class);
+          System.out.println(bean.createUser());
+  
+      }
+  
+      private static ServiceLoader demoServiceLoader() {
+          ServiceLoader<UserFactory> serviceLoader = ServiceLoader.load(UserFactory.class, Thread.currentThread().getContextClassLoader());
+          displayServiceLoader(serviceLoader);
+          return serviceLoader;
+      }
+  
+      private static void displayServiceLoader(ServiceLoader<UserFactory> userFactoryServiceLoader) {
+  
+          Iterator<UserFactory> iterator = userFactoryServiceLoader.iterator();
+          while (iterator.hasNext()){
+              UserFactory next = iterator.next();
+              System.out.println(next.createUser());
+          }
+  
+      }
+  
+  }
+  
+  ```
+
+  >User{id=10, name='Tom Cat', age=12}
+  >User{id=10, name='Tom Cat', age=12}
+  >true
+  >User{id=10, name='Tom Cat', age=12}
+  >User{id=10, name='Tom Cat', age=12}
+  >false
+  >User{id=10, name='Tom Cat', age=12}
+
+  
 
 ## 初始化Bean
 
+- Bean初始化
 
+  - @PostConstruct（javax.annotation.PostConstruct）标注方法：在完成依赖注入后执行，java11中已被废弃（具体从什么版本废弃有待查阅）
+  - 实现`org.springframework.beans.factory.InitializingBean`接口的afterPropertiesSet()   方法
+  - 自定义初始化方法
+    - XML 配置：<bean init-method=”init” ... />  
+    - Java 注解：@Bean(initMethod=”init”)  
+    - Java API：AbstractBeanDefinition#setInitMethodName(String)  
+
+  思考：假设以上三种方式均在同一 Bean 中定义，那么这些方法的执行顺序是怎样？  
+
+- Bean延迟初始化
+
+  - XML 配置：<bean lazy-init=”true” ... />  
+  - Java 注解：@Lazy(true)  
+
+  思考：当某个 Bean 定义为延迟初始化，那么，Spring 容器返回的对象与非延迟的对象存在怎样的差异？  （延迟初始化，在获取Bean之前Bean是否已经实例化？是。见源码`org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#doCreateBean`）
+
+  ```java
+  package org.geekbang.thinking.in.spring.bean.factory;
+  
+  import com.geekbang.ioc.overview.dependency.domain.User;
+  import org.springframework.beans.factory.InitializingBean;
+  
+  import javax.annotation.PostConstruct;
+  
+  public class DefaultUserFactory implements UserFactory, InitializingBean {
+  
+      @PostConstruct
+      public void init(){
+          System.out.println("@PostConstruct：UserFactory初始化中...");
+      }
+  
+      /**
+       * 自定义初始化方法
+       */
+      public void initUserFactory(){
+          System.out.println("自定义初始化方法initUserFactory()：UserFactory初始化中...");
+      }
+  
+      @Override
+      public void afterPropertiesSet() throws Exception {
+          System.out.println("InitializingBean#afterPropertiesSet：UserFactory初始化中...");
+      }
+  }
+  
+  ```
+
+  ```java
+  package org.geekbang.thinking.in.spring.bean.definition;
+  
+  import org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory;
+  import org.geekbang.thinking.in.spring.bean.factory.UserFactory;
+  import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+  import org.springframework.context.annotation.Bean;
+  import org.springframework.context.annotation.Configuration;
+  import org.springframework.context.annotation.Lazy;
+  
+  /**
+   * Bean初始化 demo
+   */
+  @Configuration
+  public class InitializationDemo {
+  
+      public static void main(String[] args) {
+          AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+          context.register(InitializationDemo.class);
+  
+          context.refresh();
+          System.out.println("spring应用上下文已启动...");
+  
+          UserFactory bean = context.getBean(UserFactory.class);
+          System.out.println(bean);
+  
+          System.out.println("spring上下文准备关闭");
+          context.close();
+          System.out.println("spring上下文已关闭");
+      }
+  
+      @Bean(initMethod = "initUserFactory")
+      @Lazy(value = true)
+      public UserFactory userFactory(){
+          return new DefaultUserFactory();
+      }
+  
+  }
+  
+  ```
+
+  延迟初始化效果：
+  
+  ```txt
+  spring应用上下文已启动...
+  @PostConstruct：UserFactory初始化中...
+  InitializingBean#afterPropertiesSet：UserFactory初始化中...
+  自定义初始化方法initUserFactory()：UserFactory初始化中...
+  org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory@709ba3fb
+  spring上下文准备关闭
+  spring上下文已关闭
+  ```
+  
+  非延迟初始化效果：
+  
+  ```txt
+  @PostConstruct：UserFactory初始化中...
+  InitializingBean#afterPropertiesSet：UserFactory初始化中...
+  自定义初始化方法initUserFactory()：UserFactory初始化中...
+  spring应用上下文已启动...
+  org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory@7364985f
+  spring上下文准备关闭
+  spring上下文已关闭
+  ```
+  
+  > 可见延迟初始化时，在获取Bean的时候初始化方法才会执行，在初始化方法中未执行。而非延迟情况下，在注册Bean且在上下文启动时初始化方法就执行了
+
+详细源码参照：
+
+- org.springframework.beans.factory.support.AbstractBeanFactory#doGetBean
+- org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory#initializeBean(java.lang.String, java.lang.Object, org.springframework.beans.factory.support.RootBeanDefinition)
+
+```java
+	protected Object initializeBean(final String beanName, final Object bean, @Nullable RootBeanDefinition mbd) {
+		if (System.getSecurityManager() != null) {
+			AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+				invokeAwareMethods(beanName, bean);
+				return null;
+			}, getAccessControlContext());
+		}
+		else {
+			invokeAwareMethods(beanName, bean);
+		}
+
+		Object wrappedBean = bean;
+		if (mbd == null || !mbd.isSynthetic()) {
+			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
+		}
+
+		try {
+			invokeInitMethods(beanName, wrappedBean, mbd);
+		}
+		catch (Throwable ex) {
+			throw new BeanCreationException(
+					(mbd != null ? mbd.getResourceDescription() : null),
+					beanName, "Invocation of init method failed", ex);
+		}
+		if (mbd == null || !mbd.isSynthetic()) {
+			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
+		}
+
+		return wrappedBean;
+	}
+```
+
+最终调用方法：
+
+```java
+	protected void invokeInitMethods(String beanName, final Object bean, @Nullable RootBeanDefinition mbd)
+			throws Throwable {
+
+		boolean isInitializingBean = (bean instanceof InitializingBean);
+		if (isInitializingBean && (mbd == null || !mbd.isExternallyManagedInitMethod("afterPropertiesSet"))) {
+			if (logger.isTraceEnabled()) {
+				logger.trace("Invoking afterPropertiesSet() on bean with name '" + beanName + "'");
+			}
+			if (System.getSecurityManager() != null) {
+				try {
+					AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
+						((InitializingBean) bean).afterPropertiesSet();
+						return null;
+					}, getAccessControlContext());
+				}
+				catch (PrivilegedActionException pae) {
+					throw pae.getException();
+				}
+			}
+			else {
+				((InitializingBean) bean).afterPropertiesSet();
+			}
+		}
+
+		if (mbd != null && bean.getClass() != NullBean.class) {
+			String initMethodName = mbd.getInitMethodName();
+			if (StringUtils.hasLength(initMethodName) &&
+					!(isInitializingBean && "afterPropertiesSet".equals(initMethodName)) &&
+					!mbd.isExternallyManagedInitMethod(initMethodName)) {
+				invokeCustomInitMethod(beanName, bean, mbd);
+			}
+		}
+	}
+```
+
+从源码可见init方法调用顺序：InitializingBean的实现方法 -> 自定义初始化方法
 
 
 
 ## 销毁Spring Bean
 
+- @PreDestroy 标注方法
+- 实现 DisposableBean 接口的 destroy() 方法
+- 自定义销毁方法
+  - XML 配置：<bean destroy=”destroy” ... />
+  - Java 注解：@Bean(destroy=”destroy”)
+  - Java API：AbstractBeanDefinition#setDestroyMethodName(String)
+
+DefaultFactory中增加销毁方法：
+
+```java
+package org.geekbang.thinking.in.spring.bean.factory;
+
+import com.geekbang.ioc.overview.dependency.domain.User;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.SmartInitializingSingleton;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
+public class DefaultUserFactory implements UserFactory, InitializingBean, SmartInitializingSingleton, DisposableBean {
+
+    @PostConstruct
+    public void init(){
+        System.out.println("@PostConstruct：UserFactory初始化中...");
+    }
+
+    /**
+     * 自定义初始化方法
+     */
+    public void initUserFactory(){
+        System.out.println("自定义初始化方法initUserFactory()：UserFactory初始化中...");
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println("InitializingBean#afterPropertiesSet：UserFactory初始化中...");
+    }
+
+    @Override
+    public void afterSingletonsInstantiated() {
+        System.out.println("SmartInitializingSingleton#afterSingletonsInstantiated: UserFactoryy已经初始化中");
+    }
+
+    @PreDestroy
+    public void destory(){
+        System.out.println("@PreDestroy：UserFactory销毁中...");
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        System.out.println("DisposableBean#destroy：UserFactory销毁中...");
+    }
+
+    public void destroyMethod(){
+        System.out.println("DefaultUserFactory#destroyMethod：UserFactory销毁中...");
+    }
+
+}
+
+```
+
+```java
+package org.geekbang.thinking.in.spring.bean.definition;
+
+import org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory;
+import org.geekbang.thinking.in.spring.bean.factory.UserFactory;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
+
+/**
+ * Bean初始化 demo
+ */
+@Configuration
+public class InitializationDemo {
+
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.register(InitializationDemo.class);
+
+        context.refresh();
+        System.out.println("spring应用上下文已启动...");
+
+        UserFactory bean = context.getBean(UserFactory.class);
+        System.out.println(bean);
+
+        System.out.println("spring上下文准备关闭");
+        context.close();
+        System.out.println("spring上下文已关闭");
+    }
+
+    @Bean(initMethod = "initUserFactory", destroyMethod = "destroyMethod")
+    @Lazy(value = false)
+    public UserFactory userFactory(){
+        return new DefaultUserFactory();
+    }
+
+}
+
+```
+
+运行结果：
+
+```txt
+@PostConstruct：UserFactory初始化中...
+InitializingBean#afterPropertiesSet：UserFactory初始化中...
+自定义初始化方法initUserFactory()：UserFactory初始化中...
+SmartInitializingSingleton#afterSingletonsInstantiated: UserFactoryy已经初始化中
+spring应用上下文已启动...
+org.geekbang.thinking.in.spring.bean.factory.DefaultUserFactory@3d36e4cd
+spring上下文准备关闭
+@PreDestroy：UserFactory销毁中...
+DisposableBean#destroy：UserFactory销毁中...
+DefaultUserFactory#destroyMethod：UserFactory销毁中...
+spring上下文已关闭
+```
+
+思考：假设以上三种方式均在同一 Bean 中定义，那么这些方法的执行顺序是怎样？  
+
+> 可见，类似初始方法：@PreDestroy -> DisposableBean接口实现方法 -> 自定义销毁方法
 
 
-## 垃圾回收Bean
+
+## 垃圾回收Bean（GC）
+
+1. 关闭 Spring 容器（应用上下文）
+2. 执行 GC
+3. Spring Bean 覆盖的 finalize() 方法被回调  
+
+```java
+package org.geekbang.thinking.in.spring.bean.factory;
+
+import com.geekbang.ioc.overview.dependency.domain.User;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.SmartInitializingSingleton;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
+public class DefaultUserFactory implements UserFactory, InitializingBean, SmartInitializingSingleton, DisposableBean {
+
+    @PostConstruct
+    public void init(){
+        System.out.println("@PostConstruct：UserFactory初始化中...");
+    }
+
+    /**
+     * 自定义初始化方法
+     */
+    public void initUserFactory(){
+        System.out.println("自定义初始化方法initUserFactory()：UserFactory初始化中...");
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println("InitializingBean#afterPropertiesSet：UserFactory初始化中...");
+    }
+
+    @Override
+    public void afterSingletonsInstantiated() {
+        System.out.println("SmartInitializingSingleton#afterSingletonsInstantiated: UserFactoryy已经初始化中");
+    }
+
+    @PreDestroy
+    public void destory(){
+        System.out.println("@PreDestroy：UserFactory销毁中...");
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        System.out.println("DisposableBean#destroy：UserFactory销毁中...");
+    }
+
+    public void destroyMethod(){
+        System.out.println("DefaultUserFactory#destroyMethod：UserFactory销毁中...");
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        System.out.println("当前对象DefaultUserFactory正在回收中.......");
+    }
+}
+
+```
+
+```java
+package org.geekbang.thinking.in.spring.bean.definition;
+
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+/**
+ * Bean 垃圾回收示例
+ */
+public class BeanGarbageCollectionDemo {
+
+    public static void main(String[] args) throws InterruptedException {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.register(InitializationDemo.class);
+        context.refresh();
+        context.close();
+        Thread.sleep(5000L);
+        //强制gc，确保finalize()方法能被执行
+        System.gc();
+        Thread.sleep(5000L);
+    }
+
+}
+
+```
+
+> 注意finalize()方法只是有概率执行，不确保一定执行
+
+
+
+## 面试题
+
+### 如何注册一个 Spring Bean？  
+
+答：通过 BeanDefinition 和外部单体对象来注册  
+
+
+
+### 什么是 Spring BeanDefinition？  
+
+答：回顾“定义 Spring Bean” 和 “BeanDefinition 元信息”
+
+
+
+### Spring 容器是怎样管理注册 Bean  
+
+答：答案将在后续专题章节详细讨论，如：IoC 配置元信息读取和解析、依赖
+查找和注入以及 Bean 生命周期等。  
 
 
 

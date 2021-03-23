@@ -618,9 +618,20 @@ https://www.cnblogs.com/LDZZDL/p/9061603.html
 
 ## 面试题
 
-1. 什么是Spring IOC容器
+1. 什么是Spring IOC容器（查看官方解释）
+
+   答：Spring Framework implementation of the Inversion of Control (IoC) principle. IoC is also known as dependency
+   injection (DI). It is a process where by objects define their dependencies (that is, the other objects they work with) only
+   through constructor arguments, arguments to a factory method, or properties that are set on the object instance after it
+   is constructed or returned from a factory method. The container then injects those dependencies when it creates the bean.  
+
 2. BeanFactory和FactoryBean
+
+   答：BeanFactory 是 IoC 底层容器。FactoryBean 是 创建 Bean 的一种方式，帮助实现复杂的初始化逻辑  
+
 3. Spring IOC容器启动时做了哪些准备
+
+   答：IoC 配置元信息读取和解析、IoC 容器生命周期、Spring 事件发布、国际化等，更多答案将在后续专题章节逐一讨论  
 
 
 
@@ -1807,3 +1818,679 @@ public class BeanGarbageCollectionDemo {
 
 
 学习：深入到规范，如JSR规范、Servlet规范等
+
+
+
+
+
+# Spring IOC依赖查找
+
+## 依赖查找今生前世
+
+![image-20210222220631908](D:\BaiduNetdiskDownload\markdown笔记\spring学习.assets\image-20210222220631908.png)
+
+org.springframework.beans.factory.ObjectProvider
+
+org.springframework.beans.factory.ObjectFactory
+
+
+
+> 通过Bean名称去查找Bean是否存在，而不是直接getBean，因为直接getBean会使得Bean初始化
+
+- org.springframework.beans.factory.ListableBeanFactory#getBeansOfType(java.lang.Class<T>, boolean, boolean)
+- org.springframework.beans.factory.ListableBeanFactory#getBeanNamesForType(java.lang.Class<?>)
+
+
+
+## 单一类型依赖查找
+
+Beanfactory接口
+
+- 根据 Bean 名称查找
+
+  - getBean(String)
+  - Spring 2.5 覆盖默认参数：getBean(String,Object...)
+
+  ```java
+  package com.geekbang.dependency.lookup;
+  
+  
+  import com.geekbang.ioc.overview.dependency.domain.User;
+  import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+  import org.springframework.context.annotation.Bean;
+  import org.springframework.context.annotation.Configuration;
+  import org.springframework.context.support.ClassPathXmlApplicationContext;
+  
+  /**
+   * 单一类型查找示例
+   */
+  @Configuration
+  public class SingleTypeLookupDemo {
+  
+      public static void main(String[] args) {
+          //ApplicationContext context = new ClassPathXmlApplicationContext("classpath:/META-INF/dependency-lookup-context.xml");
+          AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+          context.register(SingleTypeLookupDemo.class);
+          context.refresh();
+          Object user = context.getBean(User.class, 1, "Jack", 30);
+          System.out.println(user);
+          context.close();
+      }
+  
+      @Bean
+      public User user(){
+          User user = new User(2, "Tom", 29);
+          return user;
+      }
+  
+  }
+  
+  ```
+
+  ```txt
+  User{id=2, name='Tom', age=29}
+  ```
+
+  > 关于覆盖参数，实际调用没什么效果，具体原因未知
+
+-  根据 Bean 类型查找
+
+  - Bean 实时查找
+
+    - Spring 3.0 getBean(Class)
+    - Spring 4.1 覆盖默认参数：getBean(Class,Object...)
+
+  - Spring 5.1 Bean 延迟查找
+
+    - getBeanProvider(Class)
+    - getBeanProvider(ResolvableType)：不常用（暂时发现）
+
+    ```java
+    package com.geekbang.dependency.lookup;
+    
+    import com.geekbang.ioc.overview.dependency.domain.User;
+    import org.springframework.beans.factory.ObjectProvider;
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    import org.springframework.context.annotation.Bean;
+    import org.springframework.context.annotation.Primary;
+    
+    public class ObjectProviderDemo {
+    
+        public static void main(String[] args) {
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+            context.register(ObjectProviderDemo.class);
+            context.refresh();
+    
+            lookupByObjectProvider(context);
+    
+            lookupByStreamOps(context);
+    
+            context.close();
+        }
+    
+        /**
+         * 查找集合
+         * @param context
+         */
+        private static void lookupByStreamOps(AnnotationConfigApplicationContext context) {
+            ObjectProvider<String> beanProvider = context.getBeanProvider(String.class);
+            beanProvider.stream().forEach(System.out::println);
+        }
+    
+        @Bean
+        public String hello(){
+            return "Hello World";
+        }
+    
+        @Bean
+        @Primary
+        public String message(){
+            return "message";
+        }
+    
+        @Bean
+        public User user(){
+            User user = new User();
+            user.setName("Tom");
+            user.setAge(80);
+            return user;
+        }
+    
+        private static void lookupByObjectProvider(AnnotationConfigApplicationContext context) {
+    
+            ObjectProvider<String> beanProvider = context.getBeanProvider(String.class);
+            System.out.println(beanProvider.getIfAvailable());
+    
+            ObjectProvider<User> beanProvider1 = context.getBeanProvider(User.class);
+            System.out.println(beanProvider1.getIfAvailable());
+    
+        }
+    
+    
+    }
+    
+    ```
+
+    ```txt
+    message
+    User{id=null, name='Tom', age=80}
+    Hello World
+    message
+    ```
+
+- 根据 Bean 名称 + 类型查找：getBean(String,Class)  
+
+
+
+## 集合类型查找
+
+ListableBeanFactory接口
+
+- 根据 Bean 类型查找
+  - 获取同类型 Bean 名称列表
+    - getBeanNamesForType(Class)
+    - Spring 4.2 getBeanNamesForType(ResolvableType)
+  - 获取同类型 Bean 实例列表
+    - getBeansOfType(Class) 以及重载方法
+- 通过注解类型查找
+  - Spring 3.0 获取标注类型 Bean 名称列表
+    - getBeanNamesForAnnotation(Class<? extends Annotation>)
+  - Spring 3.0 获取标注类型 Bean 实例列表
+    - getBeansWithAnnotation(Class<? extends Annotation>)
+  - Spring 3.0 获取指定名称 + 标注类型 Bean 实例（貌似错了）
+    - findAnnotationOnBean(String,Class<? extends Annotation>)  
+
+
+
+注意`ConfigurableListableBeanFactory`的依赖关系：
+
+![image-20210322220220538](D:\BaiduNetdiskDownload\markdown笔记\spring学习.assets\image-20210322220220538.png)
+
+> 可见，ConfiguratableListbleBeanFactory具备单一类型（BeanFactory）、集合类型（ListableBeanFactory）、层次性类型（HierarchicalBeanFactory）的查找能力。
+
+
+
+
+
+## 层次性依赖查找
+
+HierarchiclaBeanFactory接口
+
+- 双亲 BeanFactory：getParentBeanFactory()
+
+- 层次性查找
+
+  - 根据 Bean 名称查找
+
+    - 基于 containsLocalBean 方法实现
+
+    ```java
+    package com.geekbang.dependency.lookup;
+    
+    import org.springframework.beans.factory.HierarchicalBeanFactory;
+    import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+    import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+    import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
+    import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+    
+    /**
+     * 层次性依赖查找示例
+     */
+    public class HierarchicalDependencyLookupDemo {
+    
+        public static void main(String[] args) {
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+            context.register(HierarchicalDependencyLookupDemo.class);
+    
+            //1. 获取 HierarchicalBeanFactory <- ConfigurableBeanFactory <- ConfigurableListableBeanFactory
+            ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
+            System.out.println(beanFactory.getParentBeanFactory());
+    
+            //2.设置parent BeanFactory
+            HierarchicalBeanFactory hierarchicalBeanFactory = createHierarchicalBeanFactory();
+            beanFactory.setParentBeanFactory(hierarchicalBeanFactory);
+            System.out.println(beanFactory.getParentBeanFactory());
+    
+            //3.使用containsLocalBean方法查找Bean
+            displayContainsLocalBean(beanFactory, "user");
+            displayContainsLocalBean(hierarchicalBeanFactory, "user");
+    
+            //4.使用containBean方法查找Bean
+            displayContainsBean(beanFactory, "user");
+            displayContainsBean(hierarchicalBeanFactory, "user");
+    
+            context.refresh();
+            context.close();
+        }
+    
+        private static void displayContainsBean(HierarchicalBeanFactory beanFactory, String beanName) {
+            System.out.printf("当前BeanFactory[%s]是否包含Local Bean [%s] : %s\n", beanFactory, beanName,
+                    beanFactory.containsBean(beanName));
+        }
+    
+        private static void displayContainsLocalBean(HierarchicalBeanFactory beanFactory, String beanName) {
+            System.out.printf("当前BeanFactory[%s]是否包含Local Bean [%s] : %s\n", beanFactory, beanName,
+                    beanFactory.containsLocalBean(beanName));
+        }
+    
+        /**
+         * 创建BeanFactory容器（层次性）
+         * @return
+         */
+        private static HierarchicalBeanFactory createHierarchicalBeanFactory() {
+            DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+            XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(beanFactory);
+            String location = "classpath:/META-INF/dependency-lookup-context.xml";
+            reader.loadBeanDefinitions(location);
+            return beanFactory;
+        }
+    
+    }
+    
+    ```
+
+    ```txt
+    null
+    
+    org.springframework.beans.factory.support.DefaultListableBeanFactory@5f375618: defining beans [user,superUser,objectFactory]; root of factory hierarchy
+    
+    当前BeanFactory[org.springframework.beans.factory.support.DefaultListableBeanFactory@36d4b5c: defining beans [org.springframework.context.annotation.internalConfigurationAnnotationProcessor,org.springframework.context.annotation.internalAutowiredAnnotationProcessor,org.springframework.context.annotation.internalCommonAnnotationProcessor,org.springframework.context.event.internalEventListenerProcessor,org.springframework.context.event.internalEventListenerFactory,hierarchicalDependencyLookupDemo]; parent: org.springframework.beans.factory.support.DefaultListableBeanFactory@5f375618]是否包含Local Bean [user] : false
+    
+    当前BeanFactory[org.springframework.beans.factory.support.DefaultListableBeanFactory@5f375618: defining beans [user,superUser,objectFactory]; root of factory hierarchy]是否包含Local Bean [user] : true
+    
+    当前BeanFactory[org.springframework.beans.factory.support.DefaultListableBeanFactory@36d4b5c: defining beans [org.springframework.context.annotation.internalConfigurationAnnotationProcessor,org.springframework.context.annotation.internalAutowiredAnnotationProcessor,org.springframework.context.annotation.internalCommonAnnotationProcessor,org.springframework.context.event.internalEventListenerProcessor,org.springframework.context.event.internalEventListenerFactory,hierarchicalDependencyLookupDemo]; parent: org.springframework.beans.factory.support.DefaultListableBeanFactory@5f375618]是否包含Local Bean [user] : true
+    
+    当前BeanFactory[org.springframework.beans.factory.support.DefaultListableBeanFactory@5f375618: defining beans [user,superUser,objectFactory]; root of factory hierarchy]是否包含Local Bean [user] : true
+    ```
+
+    `BeanFactory#containsBean`方法实现：
+
+    org.springframework.beans.factory.support.AbstractBeanFactory#containsBean
+
+    ```java
+    	@Override
+    	public boolean containsBean(String name) {
+    		String beanName = transformedBeanName(name);
+    		if (containsSingleton(beanName) || containsBeanDefinition(beanName)) {
+    			return (!BeanFactoryUtils.isFactoryDereference(name) || isFactoryBean(name));
+    		}
+    		// Not found -> check parent.
+    		BeanFactory parentBeanFactory = getParentBeanFactory();
+    		return (parentBeanFactory != null && parentBeanFactory.containsBean(originalBeanName(name)));
+    	}
+    ```
+
+    
+
+  - 根据 Bean 类型查找实例列表
+
+    - 单一类型：BeanFactoryUtils#beanOfType
+    - 集合类型：BeanFactoryUtils#beansOfTypeIncludingAncestors
+
+  - 根据 Java 注解查找名称列表
+
+    - BeanFactoryUtils#beanNamesForTypeIncludingAncestors  
+
+
+
+## 延迟依赖查找
+
+Bean延迟依赖查找接口
+
+- org.springframework.beans.factory.ObjectFactory
+
+  ```java
+  /*
+   * Copyright 2002-2018 the original author or authors.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *      https://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  
+  package org.springframework.beans.factory;
+  
+  import org.springframework.beans.BeansException;
+  
+  /**
+   * Defines a factory which can return an Object instance
+   * (possibly shared or independent) when invoked.
+   *
+   * <p>This interface is typically used to encapsulate a generic factory which
+   * returns a new instance (prototype) of some target object on each invocation.
+   *
+   * <p>This interface is similar to {@link FactoryBean}, but implementations
+   * of the latter are normally meant to be defined as SPI instances in a
+   * {@link BeanFactory}, while implementations of this class are normally meant
+   * to be fed as an API to other beans (through injection). As such, the
+   * {@code getObject()} method has different exception handling behavior.
+   *
+   * @author Colin Sampaleanu
+   * @since 1.0.2
+   * @param <T> the object type
+   * @see FactoryBean
+   */
+  @FunctionalInterface
+  public interface ObjectFactory<T> {
+  
+  	/**
+  	 * Return an instance (possibly shared or independent)
+  	 * of the object managed by this factory.
+  	 * @return the resulting instance
+  	 * @throws BeansException in case of creation errors
+  	 */
+  	T getObject() throws BeansException;
+  
+  }
+  
+  ```
+
+- org.springframework.beans.factory.ObjectProvider（继承了ObjectFactory，增加了一些安全的查找方式）
+
+  - Spring 5 对 Java 8 特性扩展
+    - 函数式接口
+      - getIfAvailable(Supplier)
+      - ifAvailable(Consumer)
+    - Stream 扩展 - stream()  
+
+示例见前面代码ObjectProviderDemo
+
+```java
+    private static void lookupByObjectProvider(AnnotationConfigApplicationContext context) {
+
+        ObjectProvider<String> beanProvider = context.getBeanProvider(String.class);
+        System.out.println(beanProvider.getIfAvailable());
+
+        ObjectProvider<User> beanProvider1 = context.getBeanProvider(User.class);
+        System.out.println(beanProvider1.getIfAvailable());
+
+    }
+```
+
+
+
+## 安全依赖查找
+
+| 依赖查找类型                  | 代表实现                           | 是否安全 |
+| ----------------------------- | ---------------------------------- | -------- |
+| 单一类型查找                  | BeanFactory#getBean                | 否       |
+| ObjectFactory#getObject       | 否                                 |          |
+| ObjectProvider#getIfAvailable | 是                                 |          |
+| 集合类型查找                  | ListableBeanFactory#getBeansOfType | 是       |
+| ObjectProvider#stream         | 是                                 |          |
+
+```java
+package com.geekbang.dependency.lookup;
+
+import com.geekbang.ioc.overview.dependency.domain.User;
+import org.springframework.beans.factory.ObjectFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+/**
+ * 类型安全地依赖查找
+ */
+public class TypeSafetyDependencyLookupDemo {
+
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.register(TypeSafetyDependencyLookupDemo.class);
+        context.refresh();
+
+        //演示BeanFactory#getBean方法安全性
+        displayBeanFactoryGetBean(context);
+
+        //演示ObjectFactory#getObject方法安全性
+        displayObjectFactoryGetBean(context);
+
+        //演示ObjectProvider#getIfAvailable方法安全性
+        displayObjectProviderGetIfAvailable(context);
+
+        //演示ListableBeanFactory#getBeansOfType方法安全性
+        displayListableBeanFactoryGetBeansOfType(context);
+
+        //演示ObjectProvider#stream 方法安全性
+        displayObjectProviderStream(context);
+
+        context.close();
+    }
+
+    private static void displayObjectProviderStream(AnnotationConfigApplicationContext context) {
+        ObjectProvider<User> beanProvider = context.getBeanProvider(User.class);
+        printBeansException("displayObjectProviderStream", () -> beanProvider.stream().forEach(System.out::println));
+    }
+
+    private static void displayListableBeanFactoryGetBeansOfType(AnnotationConfigApplicationContext context) {
+        ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
+        printBeansException("displayListableBeanFactoryGetBeansOfType", () -> beanFactory.getBeansOfType(User.class));
+    }
+
+    private static void displayObjectProviderGetIfAvailable(AnnotationConfigApplicationContext context) {
+        ObjectProvider<User> beanProvider = context.getBeanProvider(User.class);
+        printBeansException("displayObjectProviderGetIfAvailable", () -> beanProvider.getIfAvailable());
+    }
+
+    private static void displayObjectFactoryGetBean(AnnotationConfigApplicationContext context) {
+        //ObjectProvider is ObjectFactory
+        ObjectFactory<User> objectFactory = context.getBeanProvider(User.class);
+        printBeansException("displayObjectFactoryGetBean", () -> objectFactory.getObject());
+    }
+
+    private static void displayBeanFactoryGetBean(AnnotationConfigApplicationContext context) {
+        printBeansException("displayBeanFactoryGetBean", ()->context.getBean(User.class));
+    }
+
+
+    public static void printBeansException(String source, Runnable runnable) {
+        System.err.println("===========================");
+        System.err.printf("source from %s\n", source);
+        try {
+            runnable.run();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            System.err.println("\n");
+        }
+    }
+}
+
+```
+
+```properties
+===========================
+source from displayBeanFactoryGetBean
+org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'com.geekbang.ioc.overview.dependency.domain.User' available
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.getBean(DefaultListableBeanFactory.java:351)
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.getBean(DefaultListableBeanFactory.java:342)
+	at org.springframework.context.support.AbstractApplicationContext.getBean(AbstractApplicationContext.java:1126)
+	at com.geekbang.dependency.lookup.TypeSafetyDependencyLookupDemo.lambda$displayBeanFactoryGetBean$4(TypeSafetyDependencyLookupDemo.java:59)
+	at com.geekbang.dependency.lookup.TypeSafetyDependencyLookupDemo.printBeansException(TypeSafetyDependencyLookupDemo.java:67)
+	at com.geekbang.dependency.lookup.TypeSafetyDependencyLookupDemo.displayBeanFactoryGetBean(TypeSafetyDependencyLookupDemo.java:59)
+	at com.geekbang.dependency.lookup.TypeSafetyDependencyLookupDemo.main(TypeSafetyDependencyLookupDemo.java:20)
+
+
+===========================
+source from displayObjectFactoryGetBean
+org.springframework.beans.factory.NoSuchBeanDefinitionException: No qualifying bean of type 'com.geekbang.ioc.overview.dependency.domain.User' available
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory$1.getObject(DefaultListableBeanFactory.java:370)
+	at com.geekbang.dependency.lookup.TypeSafetyDependencyLookupDemo.lambda$displayObjectFactoryGetBean$3(TypeSafetyDependencyLookupDemo.java:55)
+	at com.geekbang.dependency.lookup.TypeSafetyDependencyLookupDemo.printBeansException(TypeSafetyDependencyLookupDemo.java:67)
+	at com.geekbang.dependency.lookup.TypeSafetyDependencyLookupDemo.displayObjectFactoryGetBean(TypeSafetyDependencyLookupDemo.java:55)
+	at com.geekbang.dependency.lookup.TypeSafetyDependencyLookupDemo.main(TypeSafetyDependencyLookupDemo.java:23)
+
+
+===========================
+source from displayObjectProviderGetIfAvailable
+
+
+===========================
+source from displayListableBeanFactoryGetBeansOfType
+
+
+===========================
+source from displayObjectProviderStream
+
+```
+
+
+
+
+
+## 内建可查找依赖
+
+AbstractApplicationContext 内建可查找的依赖  
+
+| Bean 名称                   | Bean 实例                         | 使用场景                |
+| --------------------------- | --------------------------------- | ----------------------- |
+| environment                 | Environment 对象                  | 外部化配置以及 Profiles |
+| systemProperties            | java.util.Properties 对象         | Java 系统属性           |
+| systemEnvironment           | java.util.Map 对象                | 操作系统环境变量        |
+| messageSource               | MessageSource 对象                | 国际化文案              |
+| lifecycleProcessor          | LifecycleProcessor 对象           | Lifecycle Bean 处理器   |
+| applicationEventMulticaster | ApplicationEventMulticaster 对 象 | Spring 事件广播器       |
+
+
+
+注解驱动 Spring 应用上下文内建可查找的依赖  
+
+| Bean 名称                                                    | Bean 实例                                    | 使用场景                                               |
+| ------------------------------------------------------------ | -------------------------------------------- | ------------------------------------------------------ |
+| org.springframework.context.annotation.internalConfigu rationAnnotationProcessor | ConfigurationClassPostProcesso r 对象        | 处理 Spring 配置类                                     |
+| org.springframework.context.annotation.internalAutowir edAnnotationProcessor | AutowiredAnnotationBeanPostP rocessor 对象   | 处理 @Autowired 以及 @Value 注解                       |
+| org.springframework.context.annotation.internalCommo nAnnotationProcessor | CommonAnnotationBeanPostPr ocessor 对象      | （条件激活）处理 JSR-250 注解， 如 @PostConstruct 等   |
+| org.springframework.context.event.internalEventListener Processor | EventListenerMethodProcessor 对象            | 处理标注 @EventListener 的 Spring 事件监听方法         |
+| org.springframework.context.event.internalEventListener Factory | DefaultEventListenerFactory 对 象            | @EventListener 事件监听方法适 配为 ApplicationListener |
+| org.springframework.context.annotation.internalPersiste nceAnnotationProcessor | PersistenceAnnotationBeanPost Processor 对象 | （条件激活）处理 JPA 注解场景                          |
+
+
+
+
+
+## 依赖查找中的经典异常
+
+BeansException 子类型  
+
+| 异常类型                        | 触发条件（举例）                            | 场景举例                                    |
+| ------------------------------- | ------------------------------------------- | ------------------------------------------- |
+| NoSuchBeanDefinitionException   | 当查找 Bean 不存在于 IoC 容器时             | BeanFactory#getBean ObjectFactory#getObject |
+| NoUniqueBeanDefinitionException | 类型依赖查找时，IoC 容器存在多 个 Bean 实例 | BeanFactory#getBean(Cla ss)                 |
+| BeanInstantiationException      | 当 Bean 所对应的类型非具体类时              | BeanFactory#getBean                         |
+| BeanCreationException           | 当 Bean 初始化过程中                        | Bean 初始化方法执行异常 时                  |
+| BeanDefinitionStoreException    | 当 BeanDefinition 配置元信息非法 时         | XML 配置资源无法打开时                      |
+
+
+
+## 面试题
+
+1. ObjectFactory 与 BeanFactory 的区别？
+
+   答：两者都提供依赖查找能力，ObjectFactory是延迟查找，BeanFactory是实时查找。ObjectFactory只关注一个或一种类型的Bean依赖查找（其子类ObjectProvider关注单一类型、集合类型），而BeanFactory提供了单一类型、集合类型以及层次性等多种依赖查找方式。其次，ObjectFactory借助于BeanFactory进行依赖查找。
+
+   可见源码：org.springframework.beans.factory.support.DefaultListableBeanFactory#getBeanProvider(org.springframework.core.ResolvableType)
+
+   ```java
+   	@SuppressWarnings("unchecked")
+   	@Override
+   	public <T> ObjectProvider<T> getBeanProvider(ResolvableType requiredType) {
+   		return new BeanObjectProvider<T>() {
+   			@Override
+   			public T getObject() throws BeansException {
+                   //解析Bean,最终是通过BeanFactory进行依赖查找
+   				T resolved = resolveBean(requiredType, null, false);
+   				if (resolved == null) {
+   					throw new NoSuchBeanDefinitionException(requiredType);
+   				}
+   				return resolved;
+   			}
+   			@Override
+   			public T getObject(Object... args) throws BeansException {
+   				T resolved = resolveBean(requiredType, args, false);
+   				if (resolved == null) {
+   					throw new NoSuchBeanDefinitionException(requiredType);
+   				}
+   				return resolved;
+   			}
+   			@Override
+   			@Nullable
+   			public T getIfAvailable() throws BeansException {
+   				return resolveBean(requiredType, null, false);
+   			}
+   			@Override
+   			@Nullable
+   			public T getIfUnique() throws BeansException {
+   				return resolveBean(requiredType, null, true);
+   			}
+   			@Override
+   			public Stream<T> stream() {
+   				return Arrays.stream(getBeanNamesForTypedStream(requiredType))
+   						.map(name -> (T) getBean(name))
+   						.filter(bean -> !(bean instanceof NullBean));
+   			}
+   			@Override
+   			public Stream<T> orderedStream() {
+   				String[] beanNames = getBeanNamesForTypedStream(requiredType);
+   				Map<String, T> matchingBeans = new LinkedHashMap<>(beanNames.length);
+   				for (String beanName : beanNames) {
+   					Object beanInstance = getBean(beanName);
+   					if (!(beanInstance instanceof NullBean)) {
+   						matchingBeans.put(beanName, (T) beanInstance);
+   					}
+   				}
+   				Stream<T> stream = matchingBeans.values().stream();
+   				return stream.sorted(adaptOrderComparator(matchingBeans));
+   			}
+   		};
+   	}
+   ```
+
+   
+
+2. BeanFactory.getBean 操作是否线程安全？
+
+3. 劝退面试题 - Spring 依赖查找与注入在来源上的区别? 
+
+   答：答案将《Spring IoC依赖注入》以及《Spring IoC依赖来源》章节中继续讨论。  
+
+
+
+# Spring IOC依赖注入
+
+
+
+
+
+# Spring IOC依赖来源
+
+
+
+
+
+# Spring Bean作用域（Scope）
+
+
+
+
+
+# Spring Bean声明周期（Bean Lifecycle）
+
+
+
+
+
+# Spring Bean配置元信息（Configuration Metadata）
+
+
+
+
+
+# Spring资源管理（Resource）
+

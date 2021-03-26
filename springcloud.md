@@ -2991,3 +2991,31 @@ http://www.ruanyifeng.com/blog/2018/07/json_web_token-tutorial.html
 
 
 # Spring Cloud Gateway
+
+## Route Predicate Factory(路由配置)
+
+
+
+
+
+
+
+
+
+
+
+# Spring Cloud Alibaba
+
+## nacos
+
+![img](springcloud-alibaba.asset/nacosMap.jpg)
+
+### 采坑记录
+
+使用版本：1.4.1
+
+```properties
+spring.cloud.nacos.config.namespace=4c79dbb9-978b-4409-8c1c-583a874a3ea9
+```
+
+> 命名空间应使用ID，而不是命名空间名称（除public）

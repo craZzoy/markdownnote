@@ -30,7 +30,7 @@ rabbitmqctl set_user_tags user1 administrator
 ### 什么是MQ
 message queue，消息队列，又叫消息中间件。
  - 独立运行的服务，平台无关
- - 采用队列数据结构，先进行出
+ - 采用队列数据结构，先进先出
  - 具体发布订阅模型，服务者发布消息，消费者只收到订阅的消息
 
 如果是仅仅消息消费的问题，java中有很多的队列，为什么还需要MQ？
@@ -40,7 +40,7 @@ message queue，消息队列，又叫消息中间件。
 
 - 异步通信：异步处理逻辑场景，如跨行转账，提交了请求后收到业务处理中，也就是等待消费者处理消息中
 - 系统解耦：将关联的业务动作分别通过mq通知其他系统。如	
-![当](https://img-blog.csdnimg.cn/2019092120470931.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NpbmF0XzM1NTAwMDYz,size_16,color_FFFFFF,t_70)
+![当](rabbitmq.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NpbmF0XzM1NTAwMDYz,size_16,color_FFFFFF,t_70)
 基于上述架构，当收到用户退单操作时，需要更新其他三个系统中相关信息，可能会有下述伪代码：
 
 ```java
@@ -52,11 +52,11 @@ public void returnGoods(){
 }
 ```
 其实这三个操作关系不是很大，不需要依赖相互的结果，可通过MQ解耦：
-![在这里插入图片描述](https://img-blog.csdnimg.cn/20190921205028238.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NpbmF0XzM1NTAwMDYz,size_16,color_FFFFFF,t_70)
+![在这里插入图片描述](rabbitmq.assets/01.png)
 
 - 流量削峰：当系统处理不了高并发的请求时，可通过MQ请求保存下来，系统在它能范围内内消费消息以处理请求
 - 日志处理：通过MQ保存日志，相关系统消费消息以处理日志，如基于kafaka的日志处理
-![在这里插入图片描述](https://img-blog.csdnimg.cn/20190921205522333.png)
+![在这里插入图片描述](rabbitmq.assets/20190921205522333.png)
 - 消息通讯：可用于纯消息通知，如点对点通信，聊天室
 
 使用MQ引发的问题：
@@ -65,7 +65,16 @@ public void returnGoods(){
    - 使用学习成本
    - 消息丢失，消息重复消费，可能会引起数据不一致问题
 
+
+
+## 主流MQ特性对比
+
+![img](rabbitmq.assets/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTMyMzE5MTc=,size_16,color_FFFFFF,t_70)
+
+
+
 ## RabbitMQ
+
 rabbitmq是基于AMQP协议实现的消息队列，它提供了多种特性让你权衡可靠性和性能，包括持久化、发送应答、发布确认以及高可用性。
 ### AMQP协议
 
@@ -79,8 +88,8 @@ rabbitmq支持协议：
 
 ### 工作模型
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/20190921211009318.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NpbmF0XzM1NTAwMDYz,size_16,color_FFFFFF,t_70)
-1. Broker：代理/中介，也就是只rabbitmq服务
-2. Connection：producer和consumer于broker之间建立的TCP连接
+1. Broker：代理/中介，也就是rabbitmq服务
+2. Connection：producer和consumer与broker之间建立的TCP连接
 3. Channel：Connection中的一个虚拟连接，通过创建或者释放channel而不释放tcp连接，可提升系统性能
 4. Queue：存储消息的队列，它是一个独立运行的进程，有自己的数据库（Mnesia）。消费者获取消息有两种方式，分别是pull和push，pull模式下可通过时间监听机制获取消息。
 5. Exchange：将生产的消息路由到Queue中。常用三种类型：direct、topic、fanout

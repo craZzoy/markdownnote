@@ -370,6 +370,12 @@ mvn dependency:analyze
 
 
 
+## 依赖树查看技巧
+
+https://blog.csdn.net/lzufeng/article/details/96857504
+
+
+
 # 仓库
 
 坐标与依赖在仓库中的路径的关系为：

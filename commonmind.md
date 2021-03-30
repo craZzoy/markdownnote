@@ -1472,3 +1472,569 @@ public class SimpleKeyGenerator implements KeyGenerator {
 API网关：
 
 鉴权访问者模式、门面模式
+
+
+
+
+
+# mongodb
+
+
+
+## 启动
+
+../bin/mongod
+
+mongod常用启动参数（windows下）
+
+查看更多参数：mangod --help
+
+| 参数                 | 描述                                                         |
+| :------------------- | :----------------------------------------------------------- |
+| --bind_ip            | 绑定服务IP，若绑定127.0.0.1，则只能本机访问，不指定默认本地所有IP |
+| --logpath            | 定MongoDB日志文件，注意是指定文件不是目录                    |
+| --logappend          | 使用追加的方式写日志                                         |
+| --dbpath             | 指定数据库路径                                               |
+| --port               | 指定服务端口号，默认端口27017                                |
+| --serviceName        | 指定服务名称                                                 |
+| --serviceDisplayName | 指定服务名称，有多个mongodb服务时执行。                      |
+| --install            | 指定作为一个Windows服务安装。                                |
+
+
+
+## 连接
+
+- Shell连接
+- PHP连接
+
+../bin/mongo
+
+### 参数选项
+
+- 标准格式：mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]
+
+- 常用参数选项
+
+  | 选项                | 描述                                                         |
+  | :------------------ | :----------------------------------------------------------- |
+  | replicaSet=name     | 验证replica set的名称。 Impliesconnect=replicaSet.           |
+  | slaveOk=true\|false | true:在connect=direct模式下，驱动会连接第一台机器，即使这台服务器不是主。在connect=replicaSet模式下，驱动会发送所有的写请求到主并且把读取操作分布在其他从服务器。false: 在 connect=direct模式下，驱动会自动找寻主服务器. 在connect=replicaSet 模式下，驱动仅仅连接主服务器，并且所有的读写命令都连接到主服务器。 |
+  | safe=true\|false    | true: 在执行更新操作之后，驱动都会发送getLastError命令来确保更新成功。(还要参考 wtimeoutMS).false: 在每次更新之后，驱动不会发送getLastError来确保更新成功。 |
+  | w=n                 | 驱动添加 { w : n } 到getLastError命令. 应用于safe=true。     |
+  | wtimeoutMS=ms       | 驱动添加 { wtimeout : ms } 到 getlasterror 命令. 应用于 safe=true. |
+  | fsync=true\|false   | true: 驱动添加 { fsync : true } 到 getlasterror 命令.应用于 safe=true.false: 驱动不会添加到getLastError命令中。 |
+  | journal=true\|false | 如果设置为 true, 同步到 journal (在提交到数据库前写入到实体中). 应用于 safe=true |
+  | connectTimeoutMS=ms | 可以打开连接的时间。                                         |
+  | socketTimeoutMS=ms  | 发送和接受sockets的时间。                                    |
+
+
+
+
+
+## 语句操作
+
+### 数据增删
+
+#### insert()方法
+
+语法：
+
+```sql
+ db.COLLECTION_NAME.insert(document)  
+```
+
+
+
+#### update()方法
+
+语法格式：
+
+```sql
+db.collection.update(    
+	<query>, 
+	<update>, 
+	{       
+		upsert: <boolean>,   
+		multi: <boolean>,  
+		writeConcern: <document>
+	}
+)
+```
+
+参数说明：
+
+- **query** : update的查询条件，类似sql update查询内where后面的。
+- **update** : update的对象和一些更新的操作符（如$,$inc...）等，也可以理解为sql update查询内set后面的
+- **upsert** : 可选，这个参数的意思是，如果不存在update的记录，是否插入objNew,true为插入，默认是false，不插入。
+- **multi** : 可选，mongodb 默认是false,只更新找到的第一条记录，如果这个参数为true,就把按条件查出来多条记录全部更新。
+- **writeConcern** :可选，抛出异常的级别。
+
+例：
+
+```sql
+>db.col.insert({  
+	title: 'Mongodb 教程',  
+	description: 'MongoDB 是一个 Nosql 数据库',   
+	by: 'Mongodb中文网',   
+	url: 'http://www.mongodb.org.cn',   
+	tags: ['mongodb', 'database', 'NoSQL'],  
+	likes: 100  
+})
+
+>db.col.update({'title':'MongoDB 教程'},{$set:{'title':'MongoDB'}})
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })   # 输出信息  
+
+> db.col.find().pretty()  
+{         
+	"_id" : ObjectId("56064f89ade2f21f36b03136"),  
+	"title" : "MongoDB",   
+	"description" : "MongoDB 是一个 Nosql 数据库",  
+	"by" : "Mongodb中文网",      
+	"url" : "http://www.mongodb.org.cn", 
+	"tags" : [   
+		"mongodb",   
+		"database",   
+		"NoSQL"      
+	],      
+	"likes" : 100  
+}  
+
+>  
+```
+
+
+
+#### save()方法
+
+save() 方法通过传入的文档来替换已有文档。语法格式如下：
+
+```sql
+db.collection.save(    
+	<document>,     
+	{      
+		writeConcern: <document> 
+	}  
+)  
+```
+
+参数说明：
+
+- **document** : 文档数据。
+- **writeConcern** :可选，抛出异常的级别。
+
+
+
+#### remove()方法
+
+2.6版本之前：
+
+```sql
+db.collection.remove( 
+	<query>,     
+	<justOne> 
+)  
+```
+
+2.6版本之后：
+
+```sql
+db.collection.remove(     
+	<query>,     
+	{       
+		justOne: <boolean>,
+		writeConcern: <document> 
+	} 
+)
+```
+
+
+
+### 数据查询
+
+#### find()方法
+
+语法：
+
+```sql
+db.collection.find(query, projection)
+```
+
+- **query** ：可选，使用查询操作符指定查询条件
+- **projection** ：可选，使用投影操作符指定返回的键。查询时返回文档中所有键值， 只需省略该参数即可（默认省略）。
+
+```sql
+>db.COLLECTION_NAME.find()
+>db.COLLECTION_NAME.find().pretty()
+/**只返回一个文档*/
+>db.COLLECTION_NAME.findOne()
+```
+
+
+
+#### MongoDB 与 RDBMS Where 语句比较
+
+| 操作       | 格式                     | 范例                                        | RDBMS中的类似语句       |
+| :--------- | :----------------------- | :------------------------------------------ | :---------------------- |
+| 等于       | `{<key>:<value>`}        | `db.col.find({"by":"菜鸟教程"}).pretty()`   | `where by = '菜鸟教程'` |
+| 小于       | `{<key>:{$lt:<value>}}`  | `db.col.find({"likes":{$lt:50}}).pretty()`  | `where likes < 50`      |
+| 小于或等于 | `{<key>:{$lte:<value>}}` | `db.col.find({"likes":{$lte:50}}).pretty()` | `where likes <= 50`     |
+| 大于       | `{<key>:{$gt:<value>}}`  | `db.col.find({"likes":{$gt:50}}).pretty()`  | `where likes > 50`      |
+| 大于或等于 | `{<key>:{$gte:<value>}}` | `db.col.find({"likes":{$gte:50}}).pretty()` | `where likes >= 50`     |
+| 不等于     | `{<key>:{$ne:<value>}}`  | `db.col.find({"likes":{$ne:50}}).pretty()`  | `where likes != 50`     |
+
+
+
+#### AND条件
+
+```sql
+ >db.col.find({key1:value1, key2:value2}).pretty()  
+```
+
+
+
+#### OR条件
+
+```sql
+>db.col.find(     {        $or: [  	     {key1: value1}, {key2:value2}        ]     }  ).pretty()  
+```
+
+
+
+### mongodb条件符
+
+- (>) 大于 - $gt
+- (<) 小于 - $lt
+- (>=) 大于等于 - $gte
+- (<= ) 小于等于 - $lte
+
+
+
+### $type操作符
+
+$type操作符是基于BSON类型来检索集合中匹配的类型，并返回结果。mongodb中可使用的类型：
+
+| **类型**                | **数字** | **备注**         |
+| :---------------------- | :------- | :--------------- |
+| Double                  | 1        |                  |
+| String                  | 2        |                  |
+| Object                  | 3        |                  |
+| Array                   | 4        |                  |
+| Binary data             | 5        |                  |
+| Undefined               | 6        | 已废弃。         |
+| Object id               | 7        |                  |
+| Boolean                 | 8        |                  |
+| Date                    | 9        |                  |
+| Null                    | 10       |                  |
+| Regular Expression      | 11       |                  |
+| JavaScript              | 13       |                  |
+| Symbol                  | 14       |                  |
+| JavaScript (with scope) | 15       |                  |
+| 32-bit integer          | 16       |                  |
+| Timestamp               | 17       |                  |
+| 64-bit integer          | 18       |                  |
+| Min key                 | 255      | Query with `-1`. |
+| Max key                 | 127      |                  |
+
+如获取“col”集合中“title”类型为String的数据
+
+```sql
+db.col.find({"title" : {$type : 2}})
+```
+
+
+
+### limit()方法
+
+传入一个数字值，用于指定返回的数据的条数
+
+```sql
+  >db.COLLECTION_NAME.find().limit(NUMBER)  
+```
+
+
+
+### skip()方法
+
+传入一个数字值，用于指定跳过的数据条数
+
+```sql
+  >db.COLLECTION_NAME.find().limit(NUMBER).skip(NUMBER)  
+```
+
+> 结合limit()方法实现分页的功能
+
+
+
+### sort()方法
+
+指定排序的字段，1为升序排列，-1为降序排列
+
+```sql
+  >db.COLLECTION_NAME.find().sort({KEY:1})  
+```
+
+实例：
+
+如有数据：
+
+```sql
+  { "_id" : ObjectId("56066542ade2f21f36b0313a"), "title" : "PHP 教程", "description" : "PHP 是一种创建动态交互性站点的强有力的服务器端脚本语言。", "by" : "菜鸟教程", "url" : "http://www.runoob.com", "tags" : [ "php" ], "likes" : 200 }  { "_id" : ObjectId("56066549ade2f21f36b0313b"), "title" : "Java 教程", "description" : "Java 是由Sun Microsystems公司于1995年5月推出的高级程序设计语言。", "by" : "菜鸟教程", "url" : "http://www.runoob.com", "tags" : [ "java" ], "likes" : 150 }  { "_id" : ObjectId("5606654fade2f21f36b0313c"), "title" : "MongoDB 教程", "description" : "MongoDB 是一个 Nosql 数据库", "by" : "菜鸟教程", "url" : "http://www.runoob.com", "tags" : [ "mongodb" ], "likes" : 100 }  
+```
+
+按“likes”降序排列
+
+```sql
+
+>db.col.find({},{"title":1,_id:0}).sort({"likes":-1})
+  { "title" : "PHP 教程" }  { "title" : "Java 教程" }  { "title" : "MongoDB 教程" }  >  
+```
+
+
+
+### 索引
+
+创建索引语句createIndex()语法：
+
+```sql
+>db.collection.createIndex(keys, options)
+```
+
+实例：创建“title”为索引字段，1为按升序创建索引，-1为按降序创建索引
+
+```sql
+>db.col.createIndex({"title":1})
+```
+
+使用多个字段创建索引：
+
+```sql
+>db.col.createIndex({"title":1,"description":-1})
+```
+
+
+
+可选参数：
+
+| Parameter          | Type          | Description                                                  |
+| :----------------- | :------------ | :----------------------------------------------------------- |
+| background         | Boolean       | 建索引过程会阻塞其它数据库操作，background可指定以后台方式创建索引，即增加 "background" 可选参数。 "background" 默认值为**false**。 |
+| unique             | Boolean       | 建立的索引是否唯一。指定为true创建唯一索引。默认值为**false**. |
+| name               | string        | 索引的名称。如果未指定，MongoDB的通过连接索引的字段名和排序顺序生成一个索引名称。 |
+| dropDups           | Boolean       | **3.0+版本已废弃。**在建立唯一索引时是否删除重复记录,指定 true 创建唯一索引。默认值为 **false**. |
+| sparse             | Boolean       | 对文档中不存在的字段数据不启用索引；这个参数需要特别注意，如果设置为true的话，在索引字段中不会查询出不包含对应字段的文档.。默认值为 **false**. |
+| expireAfterSeconds | integer       | 指定一个以秒为单位的数值，完成 TTL设定，设定集合的生存时间。 |
+| v                  | index version | 索引的版本号。默认的索引版本取决于mongod创建索引时运行的版本。 |
+| weights            | document      | 索引权重值，数值在 1 到 99,999 之间，表示该索引相对于其他索引字段的得分权重。 |
+| default_language   | string        | 对于文本索引，该参数决定了停用词及词干和词器的规则的列表。 默认为英语 |
+| language_override  | string        | 对于文本索引，该参数指定了包含在文档中的字段名，语言覆盖默认的language，默认值为 language. |
+
+
+
+### 聚合操作
+
+MongoDB 中聚合(aggregate)主要用于处理数据(诸如统计平均值，求和等)，并返回计算后的数据结果。
+
+有点类似 **SQL** 语句中的 **count(\*)**。
+
+------
+
+#### aggregate() 方法
+
+MongoDB中聚合的方法使用aggregate()。
+
+##### 语法
+
+aggregate() 方法的基本语法格式如下所示：
+
+```
+>db.COLLECTION_NAME.aggregate(AGGREGATE_OPERATION)
+```
+
+##### 实例
+
+集合中的数据如下：
+
+```
+{
+   _id: ObjectId(7df78ad8902c)
+   title: 'MongoDB Overview', 
+   description: 'MongoDB is no sql database',
+   by_user: 'runoob.com',
+   url: 'http://www.runoob.com',
+   tags: ['mongodb', 'database', 'NoSQL'],
+   likes: 100
+},
+{
+   _id: ObjectId(7df78ad8902d)
+   title: 'NoSQL Overview', 
+   description: 'No sql database is very fast',
+   by_user: 'runoob.com',
+   url: 'http://www.runoob.com',
+   tags: ['mongodb', 'database', 'NoSQL'],
+   likes: 10
+},
+{
+   _id: ObjectId(7df78ad8902e)
+   title: 'Neo4j Overview', 
+   description: 'Neo4j is no sql database',
+   by_user: 'Neo4j',
+   url: 'http://www.neo4j.com',
+   tags: ['neo4j', 'database', 'NoSQL'],
+   likes: 750
+},
+```
+
+现在我们通过以上集合计算每个作者所写的文章数，使用aggregate()计算结果如下：
+
+```
+> db.mycol.aggregate([{$group : {_id : "$by_user", num_tutorial : {$sum : 1}}}])
+{
+   "result" : [
+      {
+         "_id" : "runoob.com",
+         "num_tutorial" : 2
+      },
+      {
+         "_id" : "Neo4j",
+         "num_tutorial" : 1
+      }
+   ],
+   "ok" : 1
+}
+>
+```
+
+以上实例类似sql语句：
+
+```
+ select by_user, count(*) from mycol group by by_user
+```
+
+在上面的例子中，我们通过字段 by_user 字段对数据进行分组，并计算 by_user 字段相同值的总和。
+
+下表展示了一些聚合的表达式:
+
+| 表达式    | 描述                                           | 实例                                                         |
+| :-------- | :--------------------------------------------- | :----------------------------------------------------------- |
+| $sum      | 计算总和。                                     | db.mycol.aggregate([{$group : {_id : "$by_user", num_tutorial : {$sum : "$likes"}}}]) |
+| $avg      | 计算平均值                                     | db.mycol.aggregate([{$group : {_id : "$by_user", num_tutorial : {$avg : "$likes"}}}]) |
+| $min      | 获取集合中所有文档对应值得最小值。             | db.mycol.aggregate([{$group : {_id : "$by_user", num_tutorial : {$min : "$likes"}}}]) |
+| $max      | 获取集合中所有文档对应值得最大值。             | db.mycol.aggregate([{$group : {_id : "$by_user", num_tutorial : {$max : "$likes"}}}]) |
+| $push     | 在结果文档中插入值到一个数组中。               | db.mycol.aggregate([{$group : {_id : "$by_user", url : {$push: "$url"}}}]) |
+| $addToSet | 在结果文档中插入值到一个数组中，但不创建副本。 | db.mycol.aggregate([{$group : {_id : "$by_user", url : {$addToSet : "$url"}}}]) |
+| $first    | 根据资源文档的排序获取第一个文档数据。         | db.mycol.aggregate([{$group : {_id : "$by_user", first_url : {$first : "$url"}}}]) |
+| $last     | 根据资源文档的排序获取最后一个文档数据         | db.mycol.aggregate([{$group : {_id : "$by_user", last_url : {$last : "$url"}}}]) |
+
+------
+
+#### 管道的概念
+
+管道在Unix和Linux中一般用于将当前命令的输出结果作为下一个命令的参数。
+
+MongoDB的聚合管道将MongoDB文档在一个管道处理完毕后将结果传递给下一个管道处理。管道操作是可以重复的。
+
+表达式：处理输入文档并输出。表达式是无状态的，只能用于计算当前聚合管道的文档，不能处理其它的文档。
+
+这里我们介绍一下聚合框架中常用的几个操作：
+
+- $project：修改输入文档的结构。可以用来重命名、增加或删除域，也可以用于创建计算结果以及嵌套文档。
+- $match：用于过滤数据，只输出符合条件的文档。$match使用MongoDB的标准查询操作。
+- $limit：用来限制MongoDB聚合管道返回的文档数。
+- $skip：在聚合管道中跳过指定数量的文档，并返回余下的文档。
+- $unwind：将文档中的某一个数组类型字段拆分成多条，每条包含数组中的一个值。
+- $group：将集合中的文档分组，可用于统计结果。
+- $sort：将输入文档排序后输出。
+- $geoNear：输出接近某一地理位置的有序文档。
+
+##### 管道操作符实例
+
+1、$project实例
+
+
+
+```
+db.article.aggregate(
+    { $project : {
+        title : 1 ,
+        author : 1 ,
+    }}
+ );
+```
+
+这样的话结果中就只还有_id,tilte和author三个字段了，默认情况下_id字段是被包含的，如果要想不包含_id话可以这样:
+
+```
+db.article.aggregate(
+    { $project : {
+        _id : 0 ,
+        title : 1 ,
+        author : 1
+    }});
+```
+
+2.$match实例
+
+```
+db.articles.aggregate( [
+                        { $match : { score : { $gt : 70, $lte : 90 } } },
+                        { $group: { _id: null, count: { $sum: 1 } } }
+                       ] );
+```
+
+$match用于获取分数大于70小于或等于90记录，然后将符合条件的记录送到下一阶段$group管道操作符进行处理。
+
+3.$skip实例
+
+```
+db.article.aggregate(
+    { $skip : 5 });
+```
+
+经过$skip管道操作符处理后，前五个文档被"过滤"掉。
+
+
+
+
+
+## 复制（副本集）
+
+
+
+## 分片
+
+
+
+## 备份和恢复
+
+
+
+## 监控
+
+
+
+
+
+## Mongodb Java
+
+官方网址：https://mongodb.github.io/mongo-java-driver/
+
+
+
+
+
+Mongodb索引可以随时建立？
+
+有数量限制吗？
+
+对性能有什么影响？
+
+Mangodb事务支持
+
+
+
+
+
+## Mongodb高级操作
+
+### 高级索引
+

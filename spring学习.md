@@ -2456,6 +2456,33 @@ BeansException 子类型
 
 2. BeanFactory.getBean 操作是否线程安全？
 
+   是线程安全的。
+
+   其中一处代码：org.springframework.beans.factory.support.DefaultSingletonBeanRegistry#getSingleton(java.lang.String, boolean)
+
+   ```java
+   	@Nullable
+   	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
+   		Object singletonObject = this.singletonObjects.get(beanName);
+   		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
+   			synchronized (this.singletonObjects) {
+   				singletonObject = this.earlySingletonObjects.get(beanName);
+   				if (singletonObject == null && allowEarlyReference) {
+   					ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
+   					if (singletonFactory != null) {
+   						singletonObject = singletonFactory.getObject();
+   						this.earlySingletonObjects.put(beanName, singletonObject);
+   						this.singletonFactories.remove(beanName);
+   					}
+   				}
+   			}
+   		}
+   		return singletonObject;
+   	}
+   ```
+
+   
+
 3. 劝退面试题 - Spring 依赖查找与注入在来源上的区别? 
 
    答：答案将《Spring IoC依赖注入》以及《Spring IoC依赖来源》章节中继续讨论。  
@@ -2464,7 +2491,153 @@ BeansException 子类型
 
 # Spring IOC依赖注入
 
+## 依赖注入的模式和类型
 
+- 依赖注入模式
+
+  - 手动模式：配置或者编程的方式，提前安排注入规则  
+    - XML 资源配置元信息
+    - Java 注解配置元信息
+    - API 配置元信息  
+  - 自动模式：实现方提供依赖自动关联的方式，按照內建的注入规则  
+    - Autowiring（自动绑定）  
+
+- 依赖注入类型
+
+  | 依赖注入类型 | 配置元数据举例                                   |
+  | ------------ | ------------------------------------------------ |
+  | Setter 方法  | <proeprty name="user" ref="userBean"/>           |
+  | 构造器       | <constructor-arg name="user" ref="userBean" />   |
+  | 字段         | @Autowired User user;                            |
+  | 方法         | @Autowired public void user(User user) { ... }   |
+  | 接口回调     | class MyBean implements BeanFactoryAware { ... } |
+
+
+
+## 自动绑定（Autowiring）
+
+- 官方说明
+  The Spring container can autowire relationships between collaborating beans. You can let Spring
+  resolve collaborators (other beans) automatically for your bean by inspecting the contents of the
+  ApplicationContext.
+
+-  优点
+
+  - Autowiring can significantly reduce the need to specify properties or constructor arguments.
+  - Autowiring can update a configuration as your objects evolve.  
+
+- 自动绑定模式
+
+  | 模式        | 说明                                                         |
+  | ----------- | ------------------------------------------------------------ |
+  | no          | 默认值，未激活 Autowiring，需要手动指定依赖注入对象。        |
+  | byName      | 根据被注入属性的名称作为 Bean 名称进行依赖查找，并将对象设置到该 属性。 |
+  | byType      | 根据被注入属性的类型作为依赖类型进行查找，并将对象设置到该属性。 |
+  | constructor | 特殊 byType 类型，用于构造器参数。                           |
+
+  参考枚举：org.springframework.beans.factory.annotation.Autowire  
+
+  ```java
+  /*
+   * Copyright 2002-2009 the original author or authors.
+   *
+   * Licensed under the Apache License, Version 2.0 (the "License");
+   * you may not use this file except in compliance with the License.
+   * You may obtain a copy of the License at
+   *
+   *      https://www.apache.org/licenses/LICENSE-2.0
+   *
+   * Unless required by applicable law or agreed to in writing, software
+   * distributed under the License is distributed on an "AS IS" BASIS,
+   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   * See the License for the specific language governing permissions and
+   * limitations under the License.
+   */
+  
+  package org.springframework.beans.factory.annotation;
+  
+  import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+  
+  /**
+   * Enumeration determining autowiring status: that is, whether a bean should
+   * have its dependencies automatically injected by the Spring container using
+   * setter injection. This is a core concept in Spring DI.
+   *
+   * <p>Available for use in annotation-based configurations, such as for the
+   * AspectJ AnnotationBeanConfigurer aspect.
+   *
+   * @author Rod Johnson
+   * @author Juergen Hoeller
+   * @since 2.0
+   * @see org.springframework.beans.factory.annotation.Configurable
+   * @see org.springframework.beans.factory.config.AutowireCapableBeanFactory
+   */
+  public enum Autowire {
+  
+  	/**
+  	 * Constant that indicates no autowiring at all.
+  	 */
+  	NO(AutowireCapableBeanFactory.AUTOWIRE_NO),
+  
+  	/**
+  	 * Constant that indicates autowiring bean properties by name.
+  	 */
+  	BY_NAME(AutowireCapableBeanFactory.AUTOWIRE_BY_NAME),
+  
+  	/**
+  	 * Constant that indicates autowiring bean properties by type.
+  	 */
+  	BY_TYPE(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE);
+  
+  
+  	private final int value;
+  
+  
+  	Autowire(int value) {
+  		this.value = value;
+  	}
+  
+  	public int value() {
+  		return this.value;
+  	}
+  
+  	/**
+  	 * Return whether this represents an actual autowiring value.
+  	 * @return whether actual autowiring was specified
+  	 * (either BY_NAME or BY_TYPE)
+  	 */
+  	public boolean isAutowire() {
+  		return (this == BY_NAME || this == BY_TYPE);
+  	}
+  
+  }
+  
+  ```
+
+
+
+### 自动绑定（Autowiring）的限制和不足
+
+参考官方文档：https://docs.spring.io/spring-framework/docs/5.2.2.RELEASE/spring-framework-reference/core.html#beans-autowired-exceptions
+
+与@Autowired注解有关系不？
+
+
+
+## Setter方法注入
+
+- 实现方法
+  - 手动模式
+    - XML 资源配置元信息
+    - Java 注解配置元信息
+    - API 配置元信息
+  - 自动模式
+    - byName
+    - byType  
+
+
+
+## 构造器注入
 
 
 
@@ -2480,7 +2653,7 @@ BeansException 子类型
 
 
 
-# Spring Bean声明周期（Bean Lifecycle）
+# Spring Bean生命周期（Bean Lifecycle）
 
 
 

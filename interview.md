@@ -39,10 +39,12 @@
 
 
 
+# 多线程相关
 # mysql中的事务和spring中的事务
+线程之间的通信方式
 
-
-
+- 共享内存
+- 消息传递
 # HashMap(JDK8)相关原理初探
 
 
@@ -53,7 +55,7 @@
 
 
 ## 内部数据结构
-hashmap的底层数据结构其实是数组加单向链表的形式
+hashmap的底层数据结构其实是**数组**加**单向链表**的形式
 证明：
 hashmap有这个属性
 
@@ -123,6 +125,18 @@ Node是一个内部类，其中有一个next属性指向一个Node，可见其�
 这里的构造器仅仅初始化了一个属性，其他属性呢？table的大小呢？什么时候初始化的，暂时先放着，再看看其他的构造器
 ```java
     /**
+     * The next size value at which to resize (capacity * load factor).
+     * 下次调整大小时的容量
+     *
+     * @serial
+     */
+    // (The javadoc description is true upon serialization.
+    // Additionally, if the table array has not been allocated, this
+    // field holds the initial array capacity, or zero signifying
+    // DEFAULT_INITIAL_CAPACITY.)
+    int threshold;
+
+	/**
      * Constructs an empty <tt>HashMap</tt> with the specified initial
      * capacity and load factor.
      *
@@ -131,7 +145,7 @@ Node是一个内部类，其中有一个next属性指向一个Node，可见其�
      * @throws IllegalArgumentException if the initial capacity is negative
      *         or the load factor is nonpositive
      */
-     //initialCapacity初始化容量，
+     //指定初始容量和加载因子
     public HashMap(int initialCapacity, float loadFactor) {
         if (initialCapacity < 0)
             throw new IllegalArgumentException("Illegal initial capacity: " +
@@ -142,6 +156,7 @@ Node是一个内部类，其中有一个next属性指向一个Node，可见其�
             throw new IllegalArgumentException("Illegal load factor: " +
                                                loadFactor);
         this.loadFactor = loadFactor;
+        //下一次调整后的数组容量大小，返回2的n次幂的值
         this.threshold = tableSizeFor(initialCapacity);
     }
 
@@ -152,6 +167,7 @@ Node是一个内部类，其中有一个next属性指向一个Node，可见其�
      * @param  initialCapacity the initial capacity.
      * @throws IllegalArgumentException if the initial capacity is negative.
      */
+	//指定初始容量
     public HashMap(int initialCapacity) {
         this(initialCapacity, DEFAULT_LOAD_FACTOR);
     }
@@ -229,10 +245,10 @@ Node是一个内部类，其中有一个next属性指向一个Node，可见其�
         //3、定位到table数组的某个位置，数据是空的
         if ((p = tab[i = (n - 1) & hash]) == null)
             tab[i] = newNode(hash, key, value, null);
-        else { //4、定位到的table数字位置数据不为空
+        else { //4、定位到的table数字位置数据不为空，hash冲突了
             Node<K,V> e; K k;
             if (p.hash == hash &&
-                ((k = p.key) == key || (key != null && key.equals(k)))) //4a、数组
+                ((k = p.key) == key || (key != null && key.equals(k)))) //4a、数组（判断是否与数组内第一个元素hash冲突和key是否相等）
                 e = p;
             else if (p instanceof TreeNode) //4b、节点是红黑树时赋值操作
                 e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
@@ -260,6 +276,7 @@ Node是一个内部类，其中有一个next属性指向一个Node，可见其�
                 return oldValue;
             }
         }
+        //当前Hashmap结构上的改变次数，包括改变其中的mapping的数量和rehash
         ++modCount;
         //5、拓容
         if (++size > threshold)
@@ -280,6 +297,7 @@ static final int hash(Object key) {
 可以看出，这里做的是：key为空返回0，不为空返回key的hashCode的低16位和其高16位异或结果，是int类型。假如key=name，那么算出hash("name")=3373752，二进制为1100110111101010111000
 
 2、table数组为空时，通过resize()初始化
+
 ```java
     /**
      * Initializes or doubles table size.  If null, allocates in
@@ -324,7 +342,7 @@ static final int hash(Object key) {
         //2b、新生成的table，长度为newCap
             Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
         table = newTab;
-        //5b、托容之后的数据移动操作
+        //5b、拓容之后的数据移动操作
         if (oldTab != null) {
             for (int j = 0; j < oldCap; ++j) {
                 Node<K,V> e;
@@ -400,11 +418,12 @@ if ((p = tab[i = (n - 1) & hash]) == null)
 &
 1100110111101010111000
 可见最终值一定介于0000-1111之间，即0-15之间，到此我们随机地将数据放到了table数组中，并且不会越界。其实hash%16与hash&15效果是等价的，但是&运算效率更高。
-为什么是2^n？
-因为此时cap-1的值低n位都是1，最终结果取决于hash值得低n位，这样能够使算出来的索引尽量分散，并且结果实在0至(2^n)-1之间。
 
+**为什么是2^n？**
+因为此时cap-1的值低n位都是1，**最终结果取决于hash值**得到低n位，这样能够使算出来的索引尽量分散，并且结果是在0至(2^n)-1之间。
 
 4、定位到的table数字位置数据不为空，即hash值冲突
+
  - (4a)块：数组
  - (4b)块：节点是红黑树时赋值操作
  - (4c)块：节点是链表时赋值操作，当链表长度大于8时，链表晋升为红黑树
@@ -418,6 +437,7 @@ if ((p = tab[i = (n - 1) & hash]) == null)
 ```
 当数组中不为空的元素数量大于DEFAULT_LOAD_FACTOR*DEFAULT_INITIAL_CAPACITY的值，即12时，会调用resize()托容。resize不仅用来初始化table数组，还可以用来对其拓容。
 我们继续定位到(5a)这一块内容
+
 ```java
 if (oldCap > 0) {
             //超过最大容量1 << 30，指定容量为0x7fffffff
@@ -433,6 +453,7 @@ if (oldCap > 0) {
 ```
 可见这里实现的是双倍拓容
 继续往下走，我们到了(5b)这一块，这里是拓容之后的数据移动操作
+
  - (5ba)块：单个元素移动，按原有公式hash&cap-1进行计算位置
  - (5bb)块：红黑树数据移动
  - (5bc)块：链表数据移动，其移动依据这个条件(e.hash & oldCap) == 0，其实根据oldCap为1的比特位位置，找到e.hash对应位数的值，由它决定数据的去留，只有两种可能

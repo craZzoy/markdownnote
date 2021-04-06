@@ -1,3 +1,366 @@
+# 并发编程的挑战
+
+## 多线程一定比单线程快吗？
+
+```java
+public class ConcurrencyTest {
+    
+	private static final long count = 10000l;
+    
+    public static void main(String[] args) throws InterruptedException {
+        concurrency();
+        serial();
+    }
+    
+    private static void concurrency() throws InterruptedException {
+        long start = System.currentTimeMillis();
+		Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int a = 0;
+                for (long i = 0; i < count; i++) {
+                    a += 5;
+                }
+            }
+    	});
+        thread.start();
+        int b = 0;
+        for (long i = 0; i < count; i++) {
+            b--;
+        }
+        long time = System.currentTimeMillis() - start;
+        thread.join();
+        System.out.println("concurrency :" + time+"ms,b="+b);
+	}
+    
+    private static void serial() {
+		long start = System.currentTimeMillis();
+		int a = 0;
+		for (long i = 0; i < count; i++) {
+			a += 5;
+		}
+        int b = 0;
+		for (long i = 0; i < count; i++) {
+			b--;
+		}
+        long time = System.currentTimeMillis() - start;
+		System.out.println("serial:" + time+"ms,b="+b+",a="+a);
+	}
+}
+```
+
+测试结果：
+
+![image-20210401220439149](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210401220439149.png)
+
+> 由测试结果看出，多线程不一定比多线程快。循环次数低的时候单线程速度可能更快。这是因为线程会有**创建和切换上下文的开销**
+
+度量上下文切换带来消耗的工具：
+
+- Lmbench3 ：测量上下文切换的时长
+
+- vmstat ：测量上下文切换的次数
+
+  vmstat  示例：
+
+  ![image-20210401221153297](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210401221153297.png)
+
+> cs(content switch) 表示上下文切换次数
+
+
+
+## 如何减少上下文切换
+
+- 无锁并发编程：多线程竞争锁时，会引起上下文切换，所以多线程处理数据时，可以用一
+  些办法来避免使用锁，如将数据的ID按照Hash算法取模分段，不同的线程处理不同段的数据。  
+- CAS算法：Java的Atomic包使用CAS算法来更新数据，而不需要加锁。  
+- 使用最少线程：避免创建不需要的线程，比如任务很少，但是创建了很多线程来处理，这
+  样会造成大量线程都处于等待状态。  
+- 使用协程：在单线程里实现多任务的调度，并在单线程里维持多个任务间的切换。  
+
+
+
+## 避免死锁常用方法
+
+- 避免一个线程同时获取多个锁。  
+- 避免一个线程在锁内同时占用多个资源，尽量保证每个锁只占用一个资源。  
+- 尝试使用定时锁，使用lock.tryLock（timeout）来替代使用内部锁机制。  
+- 对于数据库锁，加锁和解锁必须在一个数据库连接里，否则会出现解锁失败的情况。  
+
+
+
+## 资源限制
+
+资源的限制有时也会影响多线程执行的效率
+
+- 计算机硬件资源：带宽的上传/下载速度，硬盘读写速度，CPU处理速度
+- 软件资源：数据库连接、socket限制等
+
+
+
+# Java并发机制的底层实现原理
+
+## synchronized原理
+
+偏向锁
+
+
+
+锁膨胀
+
+- 轻量级锁
+- 重量级锁
+
+
+
+CAS原子操作问题
+
+
+
+
+
+# JAVA内存模型
+
+
+
+## JMM内存模型抽象示意图
+
+![image-20210403220502892](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210403220502892.png)
+
+共享变量是指实例域、静态域和数组元素。局部变量、方法定义参数和异常处理参数不会在线程间共享，不会有内存可见性问题。
+
+- 每一个线程拥有私有的本地内存，本地内存存储了该线程已读/写共享变量的副本。
+- 主内存（本地内存）是一个抽象的概念，本身不存在。它覆盖了缓存、写缓冲区、寄存器以及其他的硬件以及编译器的优化。
+
+
+
+如果线程A与线程B之间要通信的话，必须要经历下面2个步骤。
+1）线程A把本地内存A中更新过的共享变量刷新到主内存中去。
+2）线程B到主内存中去读取线程A之前已更新过的共享变量。  
+
+线程间通信图
+
+![image-20210403220609959](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210403220609959.png)
+
+## 重排序
+
+重排序是指编译器和处理器为了优化程序性能而对指令系列进行重新排序的一种手段。
+
+- 编译器重排序
+
+  - 编译器优化的重排序。编译器在不改变单线程程序语义的前提下，可以重新安排语句的执行顺序。
+  - 指令级并行的重排序。现代处理器采用了指令级并行技术（Instruction-LevelParallelism，ILP）来将多条指令重叠执行。如果不存在数据依赖性，处理器可以改变语句对应机器指令的执行顺序。
+
+- 处理器重排序
+
+  - 内存系统的重排序。由于处理器使用缓存和读/写缓冲区，这使得加载和存储操作看上去可能是在乱序执行。    
+
+  
+
+JAVA源代码到最终执行的指令系列经历的重排序：
+
+![image-20210404201547791](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404201547791.png)
+
+> JMM属于语言级别的内存，它确保在不同的编译器和处理器平台之上，通过禁止特定类型的编译器重排序和处理器重排序，为程序员提供一致的内存可见性保证
+
+
+
+常见处理器重排序规则
+
+![image-20210404220106351](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404220106351.png)
+
+
+
+为了保证内存可见性，JAVA编译器在生成指令系列的适当位置会插入内存屏障指令来禁止特定类型的处理器排序。
+
+![image-20210404220346498](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404220346498.png)
+
+​	`StoreLoad Barriers`是一个“全能型”的屏障，它同时具有其他3个屏障的效果。现代的多处理器大多支持该屏障（其他类型的屏障不一定被所有处理器支持）。执行该屏障开销会很昂贵，因为当前处理器通常要把写缓冲区中的数据全部刷新到内存中（Buffer Fully Flush）。  
+
+### 数据依赖性
+
+如果两个操作同时访问一个变量，且其中一个为写操作，则此时两个操作之间存在数据依赖性。数据依赖的分类：
+
+![image-20210404223349948](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404223349948.png)
+
+> 由于具有数据依赖操作的命令重排序后悔改变语义，编译器和处理器不会改变存在数据依赖关系的两个操作的执行顺序。
+
+这里所说的数据依赖性仅针对单个处理器中执行的指令序列和单个线程中执行的操作，不同处理器之间和不同线程之间的数据依赖性不被编译器和处理器考虑。  
+
+
+
+### as-if-serial
+
+as-if-serial语义的意思是：不管怎么重排序，单线程的执行结果不能被改变。编译器和处理器都必须遵守这个语义。
+
+如下面操作：
+
+```java
+double pi = 3.14; // A
+double r = 1.0; // B
+double area = pi * r * r; // C
+```
+
+编译器和处理器在做指令重排需保证：C必须在A和B之后执行，也就是A happen before C，B happen before C，A和B无数据依赖，谁先执行都行。
+
+
+
+### 控制依赖
+
+```java
+class ReorderExample {
+	int a = 0;
+	boolean flag = false;
+    
+	public void writer() {
+		a = 1; // 1
+		flag = true; // 2
+	} 
+    
+    Public void reader() {
+		if (f?lag) { // 3
+            int i = a * a; // 4
+            ……
+        }
+    }
+    
+}
+```
+
+3操作和4操作就存在控制依赖性。
+
+在单线程程序中，对存在控制依赖的操作重排序，不会改变执行结果（这也是as-if-serial语义允许对存在控制依赖的操作做重排序的原因）；但在多线程程序中，对存在控制依赖的操作重排序，可能会改变程序的执行结果。  
+
+
+
+## 顺序一致性
+
+`JMM`保证正确同步的代码与顺序一致性模型中执行的代码结果一致。
+
+
+
+在JSR-133之前的旧内存模型中，一个64位long/double型变量的读/写操作可以被拆分为两个32位的读/写操作来执行。从JSR-133内存模型开始（即从JDK5开始），仅仅只允许把一个64位long/double型变量的写操作拆分为两个32位的写操作来执行，任意的读操作在JSR-
+133中都必须具有原子性（即任意读操作必须要在单个读事务中执行）。（为啥？还是没保证对64位变量的原子操作？） 
+
+
+
+### 问题
+
+1. 64位JVM的long和double读写是不是原子操作？
+
+   参考官方jdk标准：https://docs.oracle.com/javase/specs/jls/se8/html/jls-17.html#jls-17.7
+
+   For the purposes of the Java programming language memory model, a single write to a non-volatile `long` or `double` value is treated as two separate writes: one to each 32-bit half. This can result in a situation where a thread sees the first 32 bits of a 64-bit value from one write, and the second 32 bits from another write.
+
+   Writes and reads of volatile `long` and `double` values are always atomic.
+
+   Writes to and reads of references are always atomic, regardless of whether they are implemented as 32-bit or 64-bit values.
+
+   Some implementations may find it convenient to divide a single write action on a 64-bit `long` or `double` value into two write actions on adjacent 32-bit values. For efficiency's sake, this behavior is implementation-specific; an implementation of the Java Virtual Machine is free to perform writes to `long` and `double` values atomically or in two parts.
+
+   Implementations of the Java Virtual Machine are encouraged to avoid splitting 64-bit values where possible. Programmers are encouraged to declare shared 64-bit values as `volatile` or synchronize their programs correctly to avoid possible complications.
+
+   简单来说：
+
+   - 实现对普通long与double的读写不要求是原子的（但如果实现为原子操作也OK）
+   - 实现对volatile long与volatile double的读写必须是原子的（没有选择余地）
+
+2. 333
+
+
+
+## volatile
+
+volatile是轻量级的synchronized，它在多线程开发中保证了共享变量的内存“可见性”。可见性是指当一个线程修改一个共享变量时，另一个线程能读到该共享变量的值。volatile变量修饰符使用恰当的话，它比synchronized的使用和执行成本更低，因为它不使用上下文的切换和调度。
+
+> 注意，volatile是以无锁的方式实现可见性的。
+
+### volatile原理
+
+了解volatile原理之前，先了解CPU的术语定义
+
+![image-20210402223558275](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210402223558275.png)
+
+先看一段代码：
+
+```java
+instance = new Singleton(); // instance是volatile变量
+```
+
+转成汇编后：
+
+```
+0x01a3de1d: movb $0×0,0×1104800(%esi);
+0x01a3de24: lock addl $0×0,(%esp);
+```
+
+可见经过volatile修饰后，会多出第二行代码。也就是Lock前缀指令，其作用：
+
+1. **将当前处理器缓存行的数据写到系统内存**。Lock前缀指令导致在执行指令期间，声言处理器的LOCK#信号。在多处理器环境中，LOCK#信号确保在声言该信号期间，处理器可以独占任何共享内存[2]。但是，在最近的处理器里，LOCK＃信号一般不锁总线，而是锁缓存，毕竟锁总线开销的比较大。在8.1.4节有详细说明锁定操作对处理器缓存的影响，对于Intel486和Pentium处理器，在锁操作时，总是在总线上声言LOCK#信号。但在P6和目前的处理器中，如果访问的内存区域已经缓存在处理器内部，则不会声言LOCK#信号。相反，它会锁定这块内存区域的缓存并回写到内存，并使用缓存一致性机制来确保修改的原子性，此操作被称为“缓存锁
+   定”，缓存一致性机制会阻止同时修改由两个以上处理器缓存的内存区域数据。  
+2. **这个写回内存的操作会使在其他CPU里缓存了该内存地址的数据无效**。IA-32处理器和Intel 64处理器使用MESI（修改、独占、共享、无效）控制协议去维护内部缓存和其他处理器缓存的一致性。在多核处理器系统中进行操作的时候，IA-32和Intel 64处理器能嗅探其他处理器访问系统内存和它们的内部缓存。处理器使用嗅探技术保证它的内部缓存、系统内存和其他处理器的缓存的数据在总线上保持一致。例如，在Pentium和P6 family处理器中，如果通过嗅探一个处理器来检测其他处理器打算写内存地址，而这个地址当前处于共享状态，那么正在嗅探的处理器将使它的缓存行无效，在下次访问相同内存地址时，强制执行缓存行填充。  
+
+> 其中使用缓存一致性协议保证各处理器的缓存是一致的
+
+
+
+### volatile内存语义
+
+volatile保证的是原子性吗？仅仅是可见性？
+
+volatile变量自身特性：
+
+- 可见性：对一个volatile变量的读，总是能看到（任意线程）对这个volatile变量最后的写入。
+- 原子性：对任意单个volatile变量的读/写具有原子性，但类似于volatile++这种复合操作（先读后写）不具有原子性。
+
+
+
+如以下程序：
+
+```java
+class VolatileExample {
+	int a = 0;
+	volatile boolean flag = false;
+	public void writer() {
+		a = 1; // 1
+		flag = true; // 2
+	}
+    public void reader() {
+		if (flag) { // 3
+			int i = a; // 4
+			……
+		}
+	}
+}
+```
+
+> volatile只保证可见性，即对同一个共享变量修改后，其他线程读取同一个共享变量是修改后的值，仅仅保证这点。但实际上线程也可能在flag写之前就获取了值
+
+验证：
+
+
+
+
+
+
+
+## 锁的内存定义
+
+3.5章节
+
+
+
+
+
+## happen-before
+
+JDK1.5开始，JAVA使用`JSR-133`内存模型。`JSR-133`使用happen-before的概念阐述操作之间的内存可见性。在JMM中，如果一
+个操作执行的结果需要对另一个操作可见，那么这两个操作之间必须要存在happens-before关系。这里提到的两个操作既可以是在一个线程之内，也可以是在不同线程之间。  happen-before仅仅要求前一个操作的结果对后一个操作可见。
+
+
+
+
+
 # 一些重要概念
 
 ## 同步和异步

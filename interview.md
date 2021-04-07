@@ -2,7 +2,7 @@
 
 1、springbean的生命周期
 2、bean的作用域
-3、分布式事物
+3、分布式事务
 4、springmvc的流程
 5、es索引结构
 6、es内存存储状态
@@ -21,7 +21,7 @@
 19、redis红锁
 20、分布式锁
 21、springboot的启动流程
-22、mysql的事物的实现原理
+22、mysql的事务实现原理
 23、Kafka isr
 24、在什么情况会指令重拍
 25、cms、g1
@@ -40,14 +40,11 @@
 
 
 # 多线程相关
-
+# mysql中的事务和spring中的事务
 线程之间的通信方式
 
 - 共享内存
 - 消息传递
-
-
-
 # HashMap(JDK8)相关原理初探
 
 
@@ -472,6 +469,20 @@ if (oldCap > 0) {
 2、普通的代码压测的时候怎么样才能尽可能的仿真
 
 https://www.infoq.cn/article/O9i6BfecBm3TI5htfM1r
+
+
+
+
+
+# 时间日期
+
+## 常用时区
+
+- UTC：世界协调时
+  - UTC+08：提前8小时，中国标准时间。
+  - CST：UTC+08知名名称之一
+
+
 
 
 

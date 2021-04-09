@@ -51,7 +51,7 @@ public class ConcurrencyTest {
 
 测试结果：
 
-![image-20210401220439149](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210401220439149.png)
+![image-20210401220439149](java多线程.assets\image-20210401220439149.png)
 
 > 由测试结果看出，多线程不一定比多线程快。循环次数低的时候单线程速度可能更快。这是因为线程会有**创建和切换上下文的开销**
 
@@ -63,7 +63,7 @@ public class ConcurrencyTest {
 
   vmstat  示例：
 
-  ![image-20210401221153297](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210401221153297.png)
+  ![image-20210401221153297](java多线程.assets\image-20210401221153297.png)
 
 > cs(content switch) 表示上下文切换次数
 
@@ -125,7 +125,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 偏向锁初始化流程：
 
-![image-20210407214917791](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210407214917791.png)
+![image-20210407214917791](java多线程.assets\image-20210407214917791.png)
 
 存在锁竞争时，偏向锁状态变化可能情况：
 
@@ -137,7 +137,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 在关闭偏向锁后，锁的初始状态是轻量级锁，有竞争（具体什么情况的竞争未明）时锁会膨胀为重量级锁：
 
-![image-20210407215856308](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210407215856308.png)
+![image-20210407215856308](java多线程.assets\image-20210407215856308.png)
 
 因为自旋会消耗CPU，为了避免无用的自旋（比如获得锁的线程阻塞了），一旦锁升级为重量级锁，就不会恢复到轻量级锁状态。在这种情况下，其他线程获取锁时都会被阻塞，当持有锁的线程释放锁后会唤醒这些线程，被唤醒的线程重新进行新的一轮锁竞争。
 
@@ -145,7 +145,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 ### 锁的优缺点对比
 
-![image-20210407215412736](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210407215412736.png)
+![image-20210407215412736](java多线程.assets\image-20210407215412736.png)
 
 
 
@@ -155,7 +155,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 ### 相关CPU术语
 
-![image-20210407224618265](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210407224618265.png)
+![image-20210407224618265](java多线程.assets\image-20210407224618265.png)
 
 
 
@@ -165,7 +165,7 @@ Synchronized用的锁是存在Java对象头里的。
 
   - 缺点：总线锁开销大，锁定区间，其他处理器不能操作其他内存的数据。
 
-  ![image-20210407225353959](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210407225353959.png)
+  ![image-20210407225353959](java多线程.assets\image-20210407225353959.png)
 
 - 使用缓存锁定保证原子性：缓存锁定是指如上图，所谓“缓存锁定”是指内存区域如果被缓存在处理器的缓存行中，并且在Lock操作期间被锁定，那么当它执行锁操作回写到内存时，处理器不在总线上声言LOCK＃信号，而是修改内部的内存地址，并允许它的缓存一致性机制来保证操作的原子性，因为缓存一致性机制会阻止同时修改由两个以上处理器缓存的内存区域数据，当其他处理器回写已被锁定的缓存行的数据时，会使缓存行无效，  当CPU1修改缓存行中的i时使用了缓存锁定，那么CPU2就不能同时缓存i的缓存行。
 
@@ -197,7 +197,7 @@ CAS原子操作问题
 
 ## JMM内存模型抽象示意图
 
-![image-20210403220502892](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210403220502892.png)
+![image-20210403220502892](java多线程.assets\image-20210403220502892.png)
 
 共享变量是指实例域、静态域和数组元素。局部变量、方法定义参数和异常处理参数不会在线程间共享，不会有内存可见性问题。
 
@@ -212,7 +212,7 @@ CAS原子操作问题
 
 线程间通信图
 
-![image-20210403220609959](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210403220609959.png)
+![image-20210403220609959](java多线程.assets\image-20210403220609959.png)
 
 ## 重排序
 
@@ -231,7 +231,7 @@ CAS原子操作问题
 
 JAVA源代码到最终执行的指令系列经历的重排序：
 
-![image-20210404201547791](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404201547791.png)
+![image-20210404201547791](java多线程.assets\image-20210404201547791.png)
 
 > JMM属于语言级别的内存，它确保在不同的编译器和处理器平台之上，通过禁止特定类型的编译器重排序和处理器重排序，为程序员提供一致的内存可见性保证
 
@@ -239,13 +239,13 @@ JAVA源代码到最终执行的指令系列经历的重排序：
 
 常见处理器重排序规则
 
-![image-20210404220106351](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404220106351.png)
+![image-20210404220106351](java多线程.assets\image-20210404220106351.png)
 
 
 
 为了保证内存可见性，JAVA编译器在生成指令系列的适当位置会插入内存屏障指令来禁止特定类型的处理器排序。
 
-![image-20210404220346498](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404220346498.png)
+![image-20210404220346498](java多线程.assets\image-20210404220346498.png)
 
 ​	`StoreLoad Barriers`是一个“全能型”的屏障，它同时具有其他3个屏障的效果。现代的多处理器大多支持该屏障（其他类型的屏障不一定被所有处理器支持）。执行该屏障开销会很昂贵，因为当前处理器通常要把写缓冲区中的数据全部刷新到内存中（Buffer Fully Flush）。  
 
@@ -253,7 +253,7 @@ JAVA源代码到最终执行的指令系列经历的重排序：
 
 如果两个操作同时访问一个变量，且其中一个为写操作，则此时两个操作之间存在数据依赖性。数据依赖的分类：
 
-![image-20210404223349948](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404223349948.png)
+![image-20210404223349948](java多线程.assets\image-20210404223349948.png)
 
 > 由于具有数据依赖操作的命令重排序后悔改变语义，编译器和处理器不会改变存在数据依赖关系的两个操作的执行顺序。
 
@@ -351,7 +351,7 @@ volatile是轻量级的synchronized，它在多线程开发中保证了共享变
 
 了解volatile原理之前，先了解CPU的术语定义
 
-![image-20210402223558275](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210402223558275.png)
+![image-20210402223558275](java多线程.assets\image-20210402223558275.png)
 
 先看一段代码：
 

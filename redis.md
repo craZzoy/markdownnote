@@ -1,5 +1,7 @@
 # redis中的数据结构
 
+分布式锁使用场景：https://www.yisu.com/zixun/89793.html
+
 缓存大致可分为两类：
 
 - 应用内缓存

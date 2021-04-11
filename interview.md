@@ -486,3 +486,20 @@ https://www.infoq.cn/article/O9i6BfecBm3TI5htfM1r
 
 
 
+# Bitmap和布隆过滤器
+
+## 布隆算法
+
+布隆算法是以bitmap集合为基础的排重算法
+
+使用场景：url去重、垃圾邮箱过滤
+
+问题：字符串hashcode可能重复，不同url的hashcode可能是相同的
+
+解决方式：对一个url进行hash多次计算（一般8次），讲生成值对应bitmap位置置1，这种方式还是会误判，hash计算次数越多，错误率越低。
+
+对应一定不能误判的业务，可对误判的值维护一个白名单。
+
+bitmap：https://mp.weixin.qq.com/s?__biz=MzIxMjE5MTE1Nw==&mid=2653191272&idx=1&sn=9bbcd172b611b455ebfc4b7fb9a6a55e&chksm=8c990eb2bbee87a486c55572a36c577a48df395e13e74314846d221cbcfd364d44c280250234&scene=21#wechat_redirect
+
+布隆算法：https://mp.weixin.qq.com/s/RmR5XmLeMvk35vgjwxANFQ

@@ -161,13 +161,13 @@ Synchronized用的锁是存在Java对象头里的。
 
 ### 处理器如何实现原子操作
 
-- 使用总线锁保证原子性：总线锁是指使用处理器提供的一个#LOCK信号，当一个处理器在总线上输出此信号时，其他处理器的请求将被阻塞，那么该处理器将独享共享内存。也就是当一个处理器读写共享变量时，不允许其他处理器操作缓存了该共享变量内存地址的缓存。
+- 使用总线锁保证原子性：总线锁是指使用处理器提供的一个#LOCK信号，当一个处理器在总线上输出此信号时，其他处理器的请求将被阻塞，那么该处理器将独享共享内存。也就是当一个处理器读改写共享变量（如i++）时，不允许其他处理器操作缓存了该共享变量内存地址的缓存。
 
   - 缺点：总线锁开销大，锁定区间，其他处理器不能操作其他内存的数据。
 
   ![image-20210407225353959](java多线程.assets\image-20210407225353959.png)
 
-- 使用缓存锁定保证原子性：缓存锁定是指如上图，所谓“缓存锁定”是指内存区域如果被缓存在处理器的缓存行中，并且在Lock操作期间被锁定，那么当它执行锁操作回写到内存时，处理器不在总线上声言LOCK＃信号，而是修改内部的内存地址，并允许它的缓存一致性机制来保证操作的原子性，因为缓存一致性机制会阻止同时修改由两个以上处理器缓存的内存区域数据，当其他处理器回写已被锁定的缓存行的数据时，会使缓存行无效，  当CPU1修改缓存行中的i时使用了缓存锁定，那么CPU2就不能同时缓存i的缓存行。
+- 使用缓存锁定保证原子性：缓存锁定是指如上图，所谓“缓存锁定”是指内存区域如果被缓存在处理器的缓存行中，并且在Lock操作期间被锁定，那么当它执行锁操作回写到内存时，处理器不在总线上声言LOCK＃信号，而是修改内部的内存地址，并允许它的缓存一致性机制来保证操作的原子性，因为缓存一致性机制会阻止同时修改由两个以上处理器缓存的内存区域数据，当其他处理器回写已被锁定的缓存行的数据时，会使缓存行无效，当CPU1修改缓存行中的i时使用了缓存锁定，那么CPU2就不能同时缓存i的缓存行。
 
 但是有两种情况处理器不会使用缓存锁定：
 
@@ -180,12 +180,79 @@ Synchronized用的锁是存在Java对象头里的。
 
 ### JAVA如何实现原子操作
 
-1. 使用CAS
-2. 使用锁
+1. 使用循环CAS：java中的cas操作正是利用了处理器提供的CMPXCHG指令实现的。
+
+   ```java
+   	private AtomicInteger atomicI = new AtomicInteger(0);
+   	private int i = 0;
+   	public static void main(String[] args) {
+           final Counter cas = new Counter();
+           List<Thread> ts = new ArrayList<Thread>(600);
+           long start = System.currentTimeMillis();
+   		for (int j = 0; j < 100; j++) {
+   			Thread t = new Thread(new Runnable() {
+                   @Override
+                   public void run() {
+                       for (int i = 0; i < 10000; i++) {
+                       cas.count();
+                       cas.safeCount();
+                       }
+                   }
+   			});
+   		ts.add(t);
+   		}
+           for (Thread t : ts) {
+               t.start();
+           }
+           // 等待所有线程执行完成
+           for (Thread t : ts) {
+               try {
+                   t.join();
+               } catch (InterruptedException e) {
+               e.printStackTrace();
+           	}
+   		}
+   		System.out.println(cas.i);
+   		System.out.println(cas.atomicI.get());
+   		System.out.println(System.currentTimeMillis() - start);
+   	}
+   	/** * 使用CAS实现线程安全计数器 */
+   	private void safeCount() {
+           for (;;) {
+               int i = atomicI.get();
+               boolean suc = atomicI.compareAndSet(i, ++i);
+               if (suc) {
+                   break;
+               }
+           }
+   	}
+   	/*** 非线程安全计数器*/
+   	private void count() {
+   		i++;
+   	}
+   }
+   ```
+
+   使用CAS会存在以下几个问题：
+
+   - ABA问题。可使用版本号解决，jdk1.5开始，atomic包中的AtomicStampedReference类可用于解决ABA问题
+
+     ```java
+     public boolean compareAndSet(
+         V expectedReference, // 预期引用
+         V newReference, // 更新后的引用
+         int expectedStamp, // 预期标志
+         int newStamp // 更新后的标志
+     )
+     ```
+
+   - 循环开销时间大。自旋CAS如果长时间不成功，会给CPU带来非常大的执行开销。如果JVM能支持处理器提供的pause指令，那么效率会有一定的提升。pause指令有两个作用：第一，它可以延迟流水线执行指令（de-pipeline），使CPU不会消耗过多的执行资源，延迟的时间取决于具体实现的版本，在一些处理器上延迟时间是零；第二，它可以避免在退出循环的时候因内存顺序冲突（Memory Order Violation）而引起CPU流水线被清空（CPU Pipeline Flush），从而提高CPU的执行效率。  
+
+   - 只能保证一个共享变量的原子操作。当对一个共享变量执行操作时，我们可以使用循环CAS的方式来保证原子操作，但是对多个共享变量操作时，循环CAS就无法保证操作的原子性，这个时候就可以用锁。还有一个取巧的办法，就是把多个共享变量合并成一个共享变量来操作。比如，有两个共享变量i＝2，j=a，合并一下ij=2a，然后用CAS来操作ij。从Java 1.5开始，JDK提供了AtomicReference类来保证引用对象之间的原子性，就可以把多个变量放在一个对象里来进行CAS操作。  
+
+2. 使用锁：锁机制保证了只有获得锁的线程才能够操作锁定的内存区域。JVM内部实现了很多种锁机制，有偏向锁、轻量级锁和互斥锁。有意思的是除了偏向锁，JVM实现锁的方式都用了循环CAS，即当一个线程想进入同步块的时候使用循环CAS的方式来获取锁，当它退出同步块的时候使用循环CAS释放锁。  
 
 
-
-CAS原子操作问题
 
 
 
@@ -422,6 +489,52 @@ class VolatileExample {
 
 
 
+## final域的内存语义
+
+```java
+public class FinalExample {
+	int i; // 普通变量
+	final int j; // final变量
+	static FinalExample obj;
+	public FinalExample () { // 构造函数
+		i = 1; // 写普通域
+		j = 2; // 写final域
+	}
+    public static void writer () { // 写线程A执行
+		obj = new FinalExample ();
+	}
+    public static void reader () { // 读线程B执行
+		FinalExample object = obj; // 读对象引用
+		int a = object.i; // 读普通域
+		int b = object.j; // 读final域
+	}
+}
+```
+
+
+
+```java
+public class FinalReferenceExample {
+	final int[] intArray; // final是引用类型
+	static FinalReferenceExample obj;
+	public FinalReferenceExample () { // 构造函数
+		intArray = new int[1]; // 1
+		intArray[0] = 1; // 2
+	}
+    public static void writerOne () { // 写线程A执行
+		obj = new FinalReferenceExample (); // 3
+	}
+    public static void writerTwo () { // 写线程B执行
+		obj.intArray[0] = 2; // 4
+	}
+    public static void reader () { // 读线程C执行
+		if (obj != null) { // 5
+			int temp1 = obj.intArray[0]; // 6
+		}
+	}
+}
+```
+
 
 
 ## happen-before
@@ -502,6 +615,52 @@ JMM的关键技术点都是围绕多线程的原子性、可见性、有序性�
 
 
 # 多线程基础
+
+## 为什么使用多线程
+
+- 更多的处理器核心
+- 更快的响应时间
+- 更好的编程模型
+
+
+
+## 线程间通信
+
+## 等待/通知经典范式
+
+等待方：
+
+1. 获取对象的锁。
+2. 如果条件不满足，那么调用对象的wait()方法，被通知后仍要检查条件。
+3. 条件满足则执行对应的逻辑。  
+
+伪代码：
+
+```java
+synchronized(对象) {
+    while(条件不满足) {
+    	对象.wait();
+    } 
+    对应的处理逻辑
+}
+```
+
+通知方：
+
+1. 获得对象的锁。
+2. 改变条件。
+3. 通知所有等待在对象上的线程。  
+
+```java
+synchronized(对象) {
+	改变条件
+	对象.notifyAll();
+}
+```
+
+
+
+
 
 ## 进程和线程
 
@@ -614,6 +773,8 @@ JMM的关键技术点都是围绕多线程的原子性、可见性、有序性�
 ```
 
 ![1570965893860](java多线程.assets\1570965893860.png)
+
+![image-20210411195633479](java多线程.assets\image-20210411195633479.png)
 
 线程状态查看命令：
 
@@ -974,7 +1135,7 @@ public class ThreadStopDemo {
 
 ### 线程中断
 
-线程中断不会是现成立即退出，而是给线程发送一个通知，也就是具体的终止线程逻辑还需目标线程自己处理。
+线程中断不会是现在立即退出，而是给线程发送一个通知，也就是具体的终止线程逻辑还需目标线程自己处理。
 
 jdk中提供了三个有关中断过的方法：
 
@@ -1393,7 +1554,7 @@ Thread-1 is running
     }
 ```
 
-> 其实join是通过this.wait方法实现的
+> 其实join是通过Object.wait方法实现的
 
 ### 示例
 

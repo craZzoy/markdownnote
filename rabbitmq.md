@@ -1266,7 +1266,7 @@ rabbitmq时基于erlang开发的，而erlang天生具有分布式特性，所以
 
 高可用的集群架构：
 
-![1569227299207](rabbitmq(一).assets\1569227299207.png)
+![1569227299207](rabbitmq.assets\1569227299207.png)
 
 规划：
 

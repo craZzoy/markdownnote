@@ -37,6 +37,11 @@
 35、mysql都有什么类型的锁
 36、线程池怎么知道线程运行完了
 
+1. java.util.concurrent.ExecutorService#isTerminated接口
+2. CountDownLatch
+3. 使用重入锁，维护公共系数
+4. 借助java.util.concurrent.ExecutorService#submit(java.util.concurrent.Callable<T>)返回的Future
+
 
 
 # 多线程相关

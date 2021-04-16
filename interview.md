@@ -538,6 +538,8 @@ bitmap：https://mp.weixin.qq.com/s?__biz=MzIxMjE5MTE1Nw==&mid=2653191272&idx=1&
 
 2. spring中的事务机制
 
+   https://zhuanlan.zhihu.com/p/148504094
+
    spring中的事务传播级别
 
    ```java

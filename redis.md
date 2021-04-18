@@ -1,5 +1,7 @@
 # redis中的数据结构
 
+分布式锁使用场景：https://www.yisu.com/zixun/89793.html
+
 缓存大致可分为两类：
 
 - 应用内缓存
@@ -738,7 +740,7 @@ tom
 
 ​	主从复制就是我们常说的master-slave模式，主数据库可进行读写操作，并把数据同步到slave节点。在一般情况下，从数据库是只读的，并接受master节点同步过来的数据。一个master可以有多个slave
 
-![1568464491877](D:/BaiduNetdiskDownload/markdown笔记/redis(二).assets/1568464491877.png)
+![1568464491877](redis.assets/1568464491877.png)
 
 ### 配置
 
@@ -784,7 +786,7 @@ slaveof 127.0.0.1 6380
 
 ​	redis全量复制一般发生在slave初始化阶段，此时slave会同步master的全部数据，具体步骤如下：
 
-![1568465474929](D:/BaiduNetdiskDownload/markdown笔记/redis(二).assets/1568465474929.png)
+![1568465474929](redis.assets/1568465474929.png)
 
 1. slave连接master，并发送sync
 2. master执行bgsave生成快照，并记录此期间的写命令，发送快照给slave
@@ -834,11 +836,11 @@ repl-diskless-sync yes
 
 ​	哨兵是一个独立的进程，它的架构为：
 
-![1568470362898](D:/BaiduNetdiskDownload/markdown笔记/redis(二).assets/1568470362898.png)
+![1568470362898](redis.assets/1568470362898.png)
 
 ​	为了解决master选举问题引入了哨兵，此时哨兵也可能出现单点问题，这就需要对哨兵做集群操作。此时的哨兵不仅会监控master、slave节点，哨兵之间还会互相监控。这种方式叫哨兵集群，哨兵集群需要解决故障发现和master决策的协商问题
 
-![1568470615527](D:/BaiduNetdiskDownload/markdown笔记/redis(二).assets/1568470615527.png)
+![1568470615527](redis.assets/1568470615527.png)
 
 
 
@@ -846,7 +848,7 @@ repl-diskless-sync yes
 
 ​	sentinel节点之间因为共同监视同一个master而产生关联，一个新加入的sentinel节点需要和其他监视相同master节点的sentinel相互感知，其机制如下图所示
 
-![1568471049467](D:/BaiduNetdiskDownload/markdown笔记/redis(二).assets/1568471049467.png)
+![1568471049467](redis.assets/1568471049467.png)
 
 1. 需要互相感知的sentinel都向它们共同监视的master节点订阅channel:sentinel:hello
 2. 新加入的sentinel节点向这个channel发布一条信息，包含自己本身的信息，这样订阅了这个channel的sentinel就可以发现这个新的sentinel
@@ -950,7 +952,7 @@ repl_backlog_histlen:18058
 
 #### 拓扑结构
 
-![1568513279241](D:/BaiduNetdiskDownload/markdown笔记/redis(二).assets/1568513279241.png)
+![1568513279241](redis.assets/1568513279241.png)
 
 ​	如图，在redis cluster结构中有以下特点
 
@@ -1021,7 +1023,7 @@ repl_backlog_histlen:18058
 
 ​	槽迁移的过程有一个不稳定的状态，这样情况下服务端会有一些规则限制客户端的行为，以保证redis在不宕机的情况下也能执行迁移。下面表示迁移1、2、3槽的过程
 
-![1568550489500](D:/BaiduNetdiskDownload/markdown笔记/redis(二).assets/1568550489500.png)
+![1568550489500](redis.assets/1568550489500.png)
 
 ​	其中简单的工作流程
 
@@ -1056,7 +1058,7 @@ repl_backlog_histlen:18058
 
 1. 构建如下目录，redis-trib .rb可不需要
 
-   ![1568595770744](D:/BaiduNetdiskDownload/markdown笔记/redis(二).assets/1568595770744.png)
+   ![1568595770744](redis.assets/1568595770744.png)
 
 2. 复制redis.conf、redis-server到每个目录，修改配置，启动各服务器
 
@@ -1807,3 +1809,20 @@ private <T> RFuture<Long> tryAcquireAsync(long leaseTime, TimeUnit unit, long th
 
 
 ### 多主机redis安全的分布式锁-redlock
+
+
+
+
+
+# 缓存常见问题
+
+https://blog.csdn.net/zeb_perfect/article/details/54135506
+
+https://zhuanlan.zhihu.com/p/346651831
+
+## 缓存雪崩
+
+## 缓存击穿
+
+## 缓存穿透
+

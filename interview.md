@@ -38,6 +38,11 @@
 35、mysql都有什么类型的锁
 36、线程池怎么知道线程运行完了
 
+1. java.util.concurrent.ExecutorService#isTerminated接口
+2. CountDownLatch
+3. 使用重入锁，维护公共系数
+4. 借助java.util.concurrent.ExecutorService#submit(java.util.concurrent.Callable<T>)返回的Future
+
 
 
 面试题记录
@@ -530,3 +535,65 @@ https://www.infoq.cn/article/O9i6BfecBm3TI5htfM1r
 bitmap：https://mp.weixin.qq.com/s?__biz=MzIxMjE5MTE1Nw==&mid=2653191272&idx=1&sn=9bbcd172b611b455ebfc4b7fb9a6a55e&chksm=8c990eb2bbee87a486c55572a36c577a48df395e13e74314846d221cbcfd364d44c280250234&scene=21#wechat_redirect
 
 布隆算法：https://mp.weixin.qq.com/s/RmR5XmLeMvk35vgjwxANFQ
+
+
+
+# 题目记录
+
+1. sql中in和exists区别
+
+   参考：https://www.cnblogs.com/liyasong/p/sql_in_exists.html
+
+   https://www.cnblogs.com/weifeng123/p/9530758.html
+
+   执行流程对比：
+
+   - select a.* from A a where a.bid in (select distinct id from B)；
+
+     流程：in后面语句先执行-->根据前面语句
+
+   - select a.* from A a where exists (select 1 from b B where )
+
+     流程：先执行exists前面语句-->再根据exists判断数据是否符合要求
+
+   一般认为：A表数据量大时适合in，B表数据量大时适合exists。实际情况还需结合sql执行计划进行判断。
+
+   其他区别：
+
+   - in和exists都能尝试命中索引
+   - not in不能命中索引，not exists可以
+
+2. spring中的事务机制
+
+   https://zhuanlan.zhihu.com/p/148504094
+
+   spring中的事务传播级别
+
+   ```java
+   public enum Propagation {
+       REQUIRED(0),
+       SUPPORTS(1),
+       MANDATORY(2),
+       REQUIRES_NEW(3),
+       NOT_SUPPORTED(4),
+       NEVER(5),
+       NESTED(6);
+   
+       private final int value;
+   
+       private Propagation(int value) {
+           this.value = value;
+       }
+   
+       public int value() {
+           return this.value;
+       }
+   }
+   ```
+
+   
+
+3. sql优化
+
+4. zookeeper中ZAB协议和Raft协议
+

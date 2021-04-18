@@ -51,7 +51,7 @@ public class ConcurrencyTest {
 
 测试结果：
 
-![image-20210401220439149](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210401220439149.png)
+![image-20210401220439149](java多线程.assets\image-20210401220439149.png)
 
 > 由测试结果看出，多线程不一定比多线程快。循环次数低的时候单线程速度可能更快。这是因为线程会有**创建和切换上下文的开销**
 
@@ -63,7 +63,7 @@ public class ConcurrencyTest {
 
   vmstat  示例：
 
-  ![image-20210401221153297](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210401221153297.png)
+  ![image-20210401221153297](java多线程.assets\image-20210401221153297.png)
 
 > cs(content switch) 表示上下文切换次数
 
@@ -125,7 +125,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 偏向锁初始化流程：
 
-![image-20210407214917791](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210407214917791.png)
+![image-20210407214917791](java多线程.assets\image-20210407214917791.png)
 
 存在锁竞争时，偏向锁状态变化可能情况：
 
@@ -137,7 +137,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 在关闭偏向锁后，锁的初始状态是轻量级锁，有竞争（具体什么情况的竞争未明）时锁会膨胀为重量级锁：
 
-![image-20210407215856308](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210407215856308.png)
+![image-20210407215856308](java多线程.assets\image-20210407215856308.png)
 
 因为自旋会消耗CPU，为了避免无用的自旋（比如获得锁的线程阻塞了），一旦锁升级为重量级锁，就不会恢复到轻量级锁状态。在这种情况下，其他线程获取锁时都会被阻塞，当持有锁的线程释放锁后会唤醒这些线程，被唤醒的线程重新进行新的一轮锁竞争。
 
@@ -145,7 +145,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 ### 锁的优缺点对比
 
-![image-20210407215412736](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210407215412736.png)
+![image-20210407215412736](java多线程.assets\image-20210407215412736.png)
 
 
 
@@ -155,7 +155,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 ### 相关CPU术语
 
-![image-20210407224618265](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210407224618265.png)
+![image-20210407224618265](java多线程.assets\image-20210407224618265.png)
 
 
 
@@ -165,7 +165,7 @@ Synchronized用的锁是存在Java对象头里的。
 
   - 缺点：总线锁开销大，锁定区间，其他处理器不能操作其他内存的数据。
 
-  ![image-20210407225353959](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210407225353959.png)
+  ![image-20210407225353959](java多线程.assets\image-20210407225353959.png)
 
 - 使用缓存锁定保证原子性：缓存锁定是指如上图，所谓“缓存锁定”是指内存区域如果被缓存在处理器的缓存行中，并且在Lock操作期间被锁定，那么当它执行锁操作回写到内存时，处理器不在总线上声言LOCK＃信号，而是修改内部的内存地址，并允许它的缓存一致性机制来保证操作的原子性，因为缓存一致性机制会阻止同时修改由两个以上处理器缓存的内存区域数据，当其他处理器回写已被锁定的缓存行的数据时，会使缓存行无效，当CPU1修改缓存行中的i时使用了缓存锁定，那么CPU2就不能同时缓存i的缓存行。
 
@@ -264,7 +264,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 ## JMM内存模型抽象示意图
 
-![image-20210403220502892](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210403220502892.png)
+![image-20210403220502892](java多线程.assets\image-20210403220502892.png)
 
 共享变量是指实例域、静态域和数组元素。局部变量、方法定义参数和异常处理参数不会在线程间共享，不会有内存可见性问题。
 
@@ -279,7 +279,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 线程间通信图
 
-![image-20210403220609959](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210403220609959.png)
+![image-20210403220609959](java多线程.assets\image-20210403220609959.png)
 
 ## 重排序
 
@@ -298,7 +298,7 @@ Synchronized用的锁是存在Java对象头里的。
 
 JAVA源代码到最终执行的指令系列经历的重排序：
 
-![image-20210404201547791](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404201547791.png)
+![image-20210404201547791](java多线程.assets\image-20210404201547791.png)
 
 > JMM属于语言级别的内存，它确保在不同的编译器和处理器平台之上，通过禁止特定类型的编译器重排序和处理器重排序，为程序员提供一致的内存可见性保证
 
@@ -306,13 +306,13 @@ JAVA源代码到最终执行的指令系列经历的重排序：
 
 常见处理器重排序规则
 
-![image-20210404220106351](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404220106351.png)
+![image-20210404220106351](java多线程.assets\image-20210404220106351.png)
 
 
 
 为了保证内存可见性，JAVA编译器在生成指令系列的适当位置会插入内存屏障指令来禁止特定类型的处理器排序。
 
-![image-20210404220346498](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404220346498.png)
+![image-20210404220346498](java多线程.assets\image-20210404220346498.png)
 
 ​	`StoreLoad Barriers`是一个“全能型”的屏障，它同时具有其他3个屏障的效果。现代的多处理器大多支持该屏障（其他类型的屏障不一定被所有处理器支持）。执行该屏障开销会很昂贵，因为当前处理器通常要把写缓冲区中的数据全部刷新到内存中（Buffer Fully Flush）。  
 
@@ -320,7 +320,7 @@ JAVA源代码到最终执行的指令系列经历的重排序：
 
 如果两个操作同时访问一个变量，且其中一个为写操作，则此时两个操作之间存在数据依赖性。数据依赖的分类：
 
-![image-20210404223349948](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210404223349948.png)
+![image-20210404223349948](java多线程.assets\image-20210404223349948.png)
 
 > 由于具有数据依赖操作的命令重排序后悔改变语义，编译器和处理器不会改变存在数据依赖关系的两个操作的执行顺序。
 
@@ -418,7 +418,7 @@ volatile是轻量级的synchronized，它在多线程开发中保证了共享变
 
 了解volatile原理之前，先了解CPU的术语定义
 
-![image-20210402223558275](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210402223558275.png)
+![image-20210402223558275](java多线程.assets\image-20210402223558275.png)
 
 先看一段代码：
 
@@ -2119,7 +2119,7 @@ synchronized作用：
 - `java.util.concurrent.locks.ReentrantLock#tryLock(long, java.util.concurrent.TimeUnit)`
 - `java.util.concurrent.locks.ReentrantLock#unlock`：释放锁
 
-重入锁完全可以替代synchronized关键字，jdk5的早期版本中重入锁性能好于synchronized，但从jdk6开始，synchronized的性能得到优化，是的两者性能相差不大
+重入锁完全可以替代Synchronized关键字，jdk5的早期版本中重入锁性能好于synchronized，但从jdk6开始，synchronized的性能得到优化，是的两者性能相差不大
 
 ```java
 package com.concurrent;
@@ -2346,7 +2346,7 @@ jstack结果：
         at java.lang.Thread.run(Thread.java:748)
 ```
 
-> 使用synchronized实现的锁，t2线程中断后，没有一个线程会停止，而都是在阻塞中
+> 使用synchronized实现的锁，t2线程中断后，没有一个线程会停止，而都是在阻塞中，因为t1线程并未释放Synchronized锁
 
 ##### 锁申请等待限时
 
@@ -4561,8 +4561,6 @@ ArrayList和Vector都是线程安全的数据实现，但Vector是线程安全�
 
 
 
-
-
 # 锁的优化及注意事项
 
 ## 提高锁性能的几点建议
@@ -5445,20 +5443,155 @@ public class CombineCompletableFuture {
 
 
 
-# `synchronized`实现原理
-
-- 偏向锁
-  - JVM相关参数（jdk6、7）：默认是启用的，但是应用程序启动几秒后才激活
-    - `-XX:BiasedLockingStartupDelay=0` ：关闭延迟
-    - `-XX:-UseBiasedLocking=false`：关闭偏向锁，程序默认会进入轻量级锁状态
-- 轻量级锁
-- 重量级锁
 
 
+# JDK并发包锁实现原理
 
-## 
+## AbstractQueuedSynchronizer队列同步器
 
+队列同步器通过维护一个由双向链表组成的队列维护对某个获取锁的线程的集合。
 
+节点数据结构
+
+```java
+static final class Node {
+        /** Marker to indicate a node is waiting in shared mode */
+        static final Node SHARED = new Node();
+        /** Marker to indicate a node is waiting in exclusive mode */
+        static final Node EXCLUSIVE = null;
+
+        /** waitStatus value to indicate thread has cancelled */
+        static final int CANCELLED =  1;
+        /** waitStatus value to indicate successor's thread needs unparking */
+        static final int SIGNAL    = -1;
+        /** waitStatus value to indicate thread is waiting on condition */
+        static final int CONDITION = -2;
+        /**
+         * waitStatus value to indicate the next acquireShared should
+         * unconditionally propagate
+         */
+        static final int PROPAGATE = -3;
+
+        /**
+         * Status field, taking on only the values:
+         *   SIGNAL:     The successor of this node is (or will soon be)
+         *               blocked (via park), so the current node must
+         *               unpark its successor when it releases or
+         *               cancels. To avoid races, acquire methods must
+         *               first indicate they need a signal,
+         *               then retry the atomic acquire, and then,
+         *               on failure, block.
+         *   CANCELLED:  This node is cancelled due to timeout or interrupt.
+         *               Nodes never leave this state. In particular,
+         *               a thread with cancelled node never again blocks.
+         *   CONDITION:  This node is currently on a condition queue.
+         *               It will not be used as a sync queue node
+         *               until transferred, at which time the status
+         *               will be set to 0. (Use of this value here has
+         *               nothing to do with the other uses of the
+         *               field, but simplifies mechanics.)
+         *   PROPAGATE:  A releaseShared should be propagated to other
+         *               nodes. This is set (for head node only) in
+         *               doReleaseShared to ensure propagation
+         *               continues, even if other operations have
+         *               since intervened.
+         *   0:          None of the above
+         *
+         * The values are arranged numerically to simplify use.
+         * Non-negative values mean that a node doesn't need to
+         * signal. So, most code doesn't need to check for particular
+         * values, just for sign.
+         *
+         * The field is initialized to 0 for normal sync nodes, and
+         * CONDITION for condition nodes.  It is modified using CAS
+         * (or when possible, unconditional volatile writes).
+         */
+        volatile int waitStatus;
+
+        /**
+         * Link to predecessor node that current node/thread relies on
+         * for checking waitStatus. Assigned during enqueuing, and nulled
+         * out (for sake of GC) only upon dequeuing.  Also, upon
+         * cancellation of a predecessor, we short-circuit while
+         * finding a non-cancelled one, which will always exist
+         * because the head node is never cancelled: A node becomes
+         * head only as a result of successful acquire. A
+         * cancelled thread never succeeds in acquiring, and a thread only
+         * cancels itself, not any other node.
+         */
+        volatile Node prev;
+
+        /**
+         * Link to the successor node that the current node/thread
+         * unparks upon release. Assigned during enqueuing, adjusted
+         * when bypassing cancelled predecessors, and nulled out (for
+         * sake of GC) when dequeued.  The enq operation does not
+         * assign next field of a predecessor until after attachment,
+         * so seeing a null next field does not necessarily mean that
+         * node is at end of queue. However, if a next field appears
+         * to be null, we can scan prev's from the tail to
+         * double-check.  The next field of cancelled nodes is set to
+         * point to the node itself instead of null, to make life
+         * easier for isOnSyncQueue.
+         */
+        volatile Node next;
+
+        /**
+         * The thread that enqueued this node.  Initialized on
+         * construction and nulled out after use.
+         */
+        volatile Thread thread;
+
+        /**
+         * Link to next node waiting on condition, or the special
+         * value SHARED.  Because condition queues are accessed only
+         * when holding in exclusive mode, we just need a simple
+         * linked queue to hold nodes while they are waiting on
+         * conditions. They are then transferred to the queue to
+         * re-acquire. And because conditions can only be exclusive,
+         * we save a field by using special value to indicate shared
+         * mode.
+         */
+        Node nextWaiter;
+
+        /**
+         * Returns true if node is waiting in shared mode.
+         */
+        final boolean isShared() {
+            return nextWaiter == SHARED;
+        }
+
+        /**
+         * Returns previous node, or throws NullPointerException if null.
+         * Use when predecessor cannot be null.  The null check could
+         * be elided, but is present to help the VM.
+         *
+         * @return the predecessor of this node
+         */
+        final Node predecessor() throws NullPointerException {
+            Node p = prev;
+            if (p == null)
+                throw new NullPointerException();
+            else
+                return p;
+        }
+
+        Node() {    // Used to establish initial head or SHARED marker
+        }
+
+        Node(Thread thread, Node mode) {     // Used by addWaiter
+            this.nextWaiter = mode;
+            this.thread = thread;
+        }
+
+        Node(Thread thread, int waitStatus) { // Used by Condition
+            this.waitStatus = waitStatus;
+            this.thread = thread;
+        }
+    }
+```
+
+![image-20210414171856387](java多线程.assets/image-20210414171856387.png)
 
 
 

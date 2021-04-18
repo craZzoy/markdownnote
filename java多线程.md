@@ -3080,7 +3080,7 @@ Thread-1 end
 
 
 
-假如指定park(obj)，则还会显示等待的阻塞的对象（等待获得锁）
+假如指定park(obj)，则还会显示等待的阻塞的对象（等待获得synchronized锁）
 
 ```properties
 "Thread-1" #13 prio=5 os_prio=0 tid=0x000000001a615800 nid=0x33ac waiting for monitor entry [0x000000001b42f000]

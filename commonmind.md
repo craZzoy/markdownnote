@@ -2053,3 +2053,16 @@ ab,Apache HTTP server benchmarking tool
 
 
 https://www.cnblogs.com/cjsblog/p/9038838.html
+
+
+
+
+
+
+
+# ElasticSearch
+
+## 启动
+
+1. Run `bin/elasticsearch` (or `bin\elasticsearch.bat` on Windows)
+2. Run `curl http://localhost:9200/` or `Invoke-RestMethod http://localhost:9200` with PowerShell

@@ -127,6 +127,8 @@ Synchronized用的锁是存在Java对象头里的。
 
 ![image-20210407214917791](java多线程.assets\image-20210407214917791.png)
 
+偏向锁的撤销：需要等待全局安全点（在这个时间点上没有正在执行的字节码）。它会首先暂停拥有偏向锁的线程，然后检查持有偏向锁的线程是否活着，如果线程不处于活动状态，则将对象头设置成无锁状态；如果线程仍然活着，拥有偏向锁的栈会被执行，遍历偏向对象的锁记录，栈中的锁记录和对象头的Mark Word要么重新偏向于其他线程，要么恢复到无锁或者标记对象不适合作为偏向锁，最后唤醒暂停的线程。  
+
 存在锁竞争时，偏向锁状态变化可能情况：
 
 - 依然偏向当前线程或者偏向其他线程
@@ -5596,6 +5598,53 @@ static final class Node {
 
 
 HashMap和ConcurrentHashMap的实现原理
+
+
+
+# JAVA并发容器和框架
+
+## ConcurrentHashMap
+
+为什么使用ConcurrentHashMap
+
+- HashMap线程不安全。在多线程环境下，使用HashMap进行put操作会引起死循环，导致CPU使用率接近100%。比如下列代码：
+
+  ```java
+  final HashMap<String, String> map = new HashMap<String, String>(2);
+  	Thread t = new Thread(new Runnable() {
+          @Override
+          public void run() {
+              for (int i = 0; i < 10000; i++) {
+                  new Thread(new Runnable() {
+                      @Override
+                      public void run() {
+                          map.put(UUID.randomUUID().toString(), "");
+                      }
+                  }, "ftf" + i).start();
+              }
+          }
+  	}, "ftf");
+  	t.start();
+  	t.join();
+  ```
+
+  多线程会导致HashMap的Entry链表形成环形数据结构，一旦形成环形数据结构，Entry的next节点永远不能为空，就会产生死循环获取Entry。
+
+- HashTable线程安全，但是效率低。HashTable是通过synchronized实现
+
+  ```java
+  public synchronized V put(K key, V value) {
+      ...
+  }
+  ```
+
+
+
+## JDK1.7中的ConcurrentHashMap实现
+
+
+
+## JDK1.8中的ConcurrentHashMap实现
 
 
 

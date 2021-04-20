@@ -5638,13 +5638,129 @@ HashMap和ConcurrentHashMap的实现原理
   }
   ```
 
-
-
-## JDK1.7中的ConcurrentHashMap实现
+- ConcurrentHashMap的锁分段技术可以有效提升访问效率（JDK7）
 
 
 
-## JDK1.8中的ConcurrentHashMap实现
+### JDK1.7中的ConcurrentHashMap实现
+
+JDK1.7中的ConcurrentHashMap是由Segment数组结构和HashEntry数组结构构成。Segment类似HashMap结构，其实现了ReentrantLock，一个Segment中包含一个HashEntry数组，每一个HashEntry是一个链表的元素。每一个Segment守护着一个HashEntry数组里元素，当对HashEntry数组的数据进行操作时，需要先获取到其对应的Segment锁
+
+![image-20210420214623895](java多线程.assets\image-20210420214623895.png)
+
+![image-20210420220107400](java多线程.assets\image-20210420220107400.png)
+
+图中HashEntry结构错误：
+
+```java
+static final class HashEntry<K,V> {
+        final int hash;
+        final K key;
+        volatile V value;
+        volatile HashEntry<K,V> next;
+
+        HashEntry(int hash, K key, V value, HashEntry<K,V> next) {
+            this.hash = hash;
+            this.key = key;
+            this.value = value;
+            this.next = next;
+        }
+
+        /**
+         * Sets next field with volatile write semantics.  (See above
+         * about use of putOrderedObject.)
+         */
+        final void setNext(HashEntry<K,V> n) {
+            UNSAFE.putOrderedObject(this, nextOffset, n);
+        }
+
+        // Unsafe mechanics
+        static final sun.misc.Unsafe UNSAFE;
+        static final long nextOffset;
+        static {
+            try {
+                UNSAFE = sun.misc.Unsafe.getUnsafe();
+                Class k = HashEntry.class;
+                nextOffset = UNSAFE.objectFieldOffset
+                    (k.getDeclaredField("next"));
+            } catch (Exception e) {
+                throw new Error(e);
+            }
+        }
+    }
+```
+
+ConcurrentHashMap初始化
+
+```java
+ /**
+     * Creates a new, empty map with a default initial capacity (16),
+     * load factor (0.75) and concurrencyLevel (16).
+     */
+    public ConcurrentHashMap() {
+        this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL);
+    }
+```
+
+```java
+/**
+     * Creates a new, empty map with the specified initial
+     * capacity, load factor and concurrency level.
+     *
+     * @param initialCapacity the initial capacity. The implementation
+     * performs internal sizing to accommodate this many elements.
+     * @param loadFactor  the load factor threshold, used to control resizing.
+     * Resizing may be performed when the average number of elements per
+     * bin exceeds this threshold.
+     * @param concurrencyLevel the estimated number of concurrently
+     * updating threads. The implementation performs internal sizing
+     * to try to accommodate this many threads.
+     * @throws IllegalArgumentException if the initial capacity is
+     * negative or the load factor or concurrencyLevel are
+     * nonpositive.
+     */
+    @SuppressWarnings("unchecked")
+    public ConcurrentHashMap(int initialCapacity,
+                             float loadFactor, int concurrencyLevel) {
+        if (!(loadFactor > 0) || initialCapacity < 0 || concurrencyLevel <= 0)
+            throw new IllegalArgumentException();
+        if (concurrencyLevel > MAX_SEGMENTS)
+            concurrencyLevel = MAX_SEGMENTS;
+        // Find power-of-two sizes best matching arguments
+        int sshift = 0; //记录ssize转变次数
+        int ssize = 1;
+        while (ssize < concurrencyLevel) {
+            ++sshift;
+            ssize <<= 1;
+        }
+        //默认算出ssize为16
+        //segmentShift用于定位参与散列运行的位数，32是因为ConcurrentHashMap里的hash()方法输出的最大数是32位（int类型），默认算出32-4=28
+        this.segmentShift = 32 - sshift;
+        //segmentMask是散列运算的掩码，默认算出15，可见掩码的二进制各位都是1
+        this.segmentMask = ssize - 1;
+        if (initialCapacity > MAXIMUM_CAPACITY)
+            initialCapacity = MAXIMUM_CAPACITY;
+        //默认 c=1
+        int c = initialCapacity / ssize;
+        if (c * ssize < initialCapacity)
+            ++c;
+        int cap = MIN_SEGMENT_TABLE_CAPACITY;
+        while (cap < c)
+            cap <<= 1;
+        // create segments and segments[0]
+        //默认 loadFactor=0.75, threshold=0, cap=1
+        Segment<K,V> s0 =
+            new Segment<K,V>(loadFactor, (int)(cap * loadFactor),
+                             (HashEntry<K,V>[])new HashEntry[cap]);
+        Segment<K,V>[] ss = (Segment<K,V>[])new Segment[ssize];
+        UNSAFE.putOrderedObject(ss, SBASE, s0); // ordered write of segments[0]
+        this.segments = ss;
+    }
+```
+
+
+
+### JDK1.8中的ConcurrentHashMap实现
 
 
 

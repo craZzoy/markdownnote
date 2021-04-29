@@ -5758,9 +5758,27 @@ ConcurrentHashMap初始化
     }
 ```
 
+常规操作
+
+get方法：此操作是不用加锁的。
+
+put方法：先获得Segment锁，然后在对应Segment数组中操作数据。
+
+size()方法：前两次不加锁计数。计数不成功（其中map集合中元素有变化）加锁后计算每个Segment中元素数量
+
 
 
 ### JDK1.8中的ConcurrentHashMap实现
+
+
+
+## ConcurrentLinkedQueue
+
+书中应该是jdk7之前的实现，都没看懂
+
+
+
+## JAVA中的阻塞队列
 
 
 

@@ -2620,6 +2620,13 @@ public void release() {
 
 ```
 
+- intavailablePermits()：返回此信号量中当前可用的许可证数。  
+- intgetQueueLength()：返回正在等待获取许可证的线程数。  
+- booleanhasQueuedThreads()：是否有线程正在等待获取许可证。  
+- void reducePermits（int reduction）：减少reduction个许可证，是个protected方法。  
+- Collection getQueuedThreads()：返回所有等待获取许可证的线程集合，是个protected方
+  法。  
+
 简单示例：
 
 ```java
@@ -2877,9 +2884,122 @@ Fire!
 
 
 
-#### 循环栅栏CyclicBarrie
+#### 循环栅栏CyclicBarrier
 
-与countDownLatch类似，不过其可以循环计数，可指定每次循环结束后的任务
+与countDownLatch类似，不过其可以循环计数，可指定每次循环结束后的任务。构造方法CyclicBarrier（int parties）中的参数表示屏障拦截的线程数量，每个线程调用await方法表示已经到达了屏障，然后当前线程被阻塞。
+
+其提供了两种构造器
+
+- java.util.concurrent.CyclicBarrier#CyclicBarrier(int, java.lang.Runnable)：提供一个barrierAction，await调用指定次数后先执行。
+
+  ```java
+  package com.tool.cyclicbarrier;
+  
+  
+  import java.util.Map;
+  import java.util.concurrent.*;
+  
+  /**
+   * {@link java.util.concurrent.CyclicBarrier} 示例
+   * 计算银行流水
+   */
+  public class BankWaterService implements Runnable {
+  
+      /**
+       * 创建4个屏障
+       */
+      private CyclicBarrier c = new CyclicBarrier(4, this);
+  
+      private Executor executor = Executors.newFixedThreadPool(4);
+  
+      private ConcurrentHashMap<String, Integer> sheetBankWaterCount = new ConcurrentHashMap<>();
+  
+      public static void main(String[] args) {
+          BankWaterService bankWaterService = new BankWaterService();
+          bankWaterService.count();
+      }
+  
+      private void count() {
+          for (int i = 0; i < 4; i++) {
+              executor.execute(() -> {
+                  //省略计算每个sheet结果过程
+                  sheetBankWaterCount.put(Thread.currentThread().getName(), 1);
+                  try {
+                      c.await();
+                  } catch (Exception e) {
+                      e.printStackTrace();
+                  }
+              });
+          }
+      }
+  
+      @Override
+      public void run() {
+          int result = 0;
+          for (Map.Entry<String, Integer> entry : sheetBankWaterCount.entrySet()) {
+              result += entry.getValue();
+          }
+          sheetBankWaterCount.put("result", result);
+          System.out.println(result);
+      }
+  
+  }
+  
+  ```
+
+  ```txt
+  4
+  ```
+
+  
+
+- java.util.concurrent.CyclicBarrier#CyclicBarrier(int)
+
+  ```java
+  package com.tool.cyclicbarrier;
+  
+  import java.util.concurrent.CyclicBarrier;
+  
+  public class CyclicBarrierTest {
+  
+      static CyclicBarrier c = new CyclicBarrier(2, new A());
+  
+      public static void main(String[] args) {
+          new Thread(() -> {
+              try {
+                  c.await();
+              } catch (Exception e) {
+                  e.printStackTrace();
+              }
+              System.out.println(1);
+          }).start();
+          try {
+              c.await();
+          } catch (Exception e) {
+              e.printStackTrace();
+          }
+          System.out.println(2);
+      }
+  
+      static class A implements Runnable {
+  
+          @Override
+          public void run(){
+                  System.out.println(3);
+          }
+      }
+  
+  }
+  
+  ```
+
+  ```txt
+  3
+  1
+  2
+  ```
+
+  
 
 例子：模拟士兵先集合，然后再执行任务，执行完结束的过程
 
@@ -3008,6 +3128,55 @@ if(i == 5){
 
 
 
+#### 线程间数据交换Exchanger
+
+Exchanger（交换者）是一个用于线程间协作的工具类。Exchanger用于进行线程间的数据交换。它提供一个同步点，在这个同步点，两个线程可以交换彼此的数据。这两个线程通过exchange方法交换数据，如果第一个线程先执行exchange()方法，它会一直等待第二个线程也执行exchange方法，当两个线程都到达同步点时，这两个线程就可以交换数据，将本线程生产出来的数据传递给对方。  
+
+```java
+package com.tool;
+
+import java.util.concurrent.Exchanger;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
+public class ExchangerTest {
+
+    private static final Exchanger<String> exchanger = new Exchanger<String>();
+
+    private static Executor threadPool = Executors.newFixedThreadPool(2);
+
+    public static void main(String[] args) {
+        threadPool.execute(() -> {
+            String A = "银行流水a";
+            try {
+                String exchange = exchanger.exchange(A);
+                System.out.println("从B中交换过来的数据：" + exchange);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        threadPool.execute(() -> {
+            String B = "银行流水b";
+            try {
+                String exchange = exchanger.exchange(B);
+                System.out.println("从A中交换过来的数据：" + exchange);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+}
+
+```
+
+```txt
+从A中交换过来的数据：银行流水a
+从B中交换过来的数据：银行流水b
+```
+
+
+
 #### 线程阻塞工具类LockSupport
 
 LockSupport是一个非常方便的线程阻塞工具类。它可以在线程内任意位置阻塞让线程阻塞。
@@ -3096,13 +3265,29 @@ Thread-1 end
 
 ## 线程池
 
+在使用异步或者并发执行任务时可以使用线程池更好的管理线程资源，合理使用线程池主要能带来三个好处：
+
+- 降低资源损耗。通过重复利用已创建的线程降低线程创建和销毁造成的消耗。  
+- 提高响应速度。当任务到达时，任务可以不需要等到线程创建就能立即执行。  
+- 提高线程的可管理度。线程是稀缺资源，如果无限制地创建，不仅会消耗系统资源，还会降低系统的稳定性，使用线程池可以进行统一分配、调优和监控。但是，要做到合理利用线程池，必须对其实现原理了如指掌。  
+
 由于线程的创建和销毁需要花费一定的时间，所以在实际的生产环境中，线程的数量必须得到控制。盲目的大量创建线程对系统是由伤害的。
 
 类似数据库连接池，线程池提供了线程复用的模型，即创建线程编程从线程池获得空闲线程，关闭线程变成了向池子归还线程
 
 ![1571406039507](java多线程.assets\1571406039507.png)
 
+### 线程池核心工作原理
+
+当提交到一个任务到线程池中时，它的主要处理流程如下：
+
+![image-20210505224656544](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210505224656544.png)
+
+1. 判断核心
+
 ### 核心API
+
+![image-20210505100456852](java多线程.assets\image-20210505100456852.png)
 
 ![1571410949721](java多线程.assets\1571410949721.png)
 
@@ -4939,9 +5124,9 @@ public class FutureMain {
 
 
 
-### JDK中Future实现
+### JDK中Future实现FutureTask
 
-![image-20200918155940780](C:/Users/Lenovo/AppData/Roaming/Typora/typora-user-images/image-20200918155940780.png)
+![image-20210505223012463](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210505223012463.png)
 
 示例代码：
 
@@ -5779,6 +5964,318 @@ size()方法：前两次不加锁计数。计数不成功（其中map集合中�
 
 
 ## JAVA中的阻塞队列
+
+阻塞队列是一个支持两个附加操作的队列
+
+- 支持阻塞的插入方法：当队列满时，队列会阻塞插入元素的线程，直到队列不满
+- 支持阻塞的移除方法：当队列为空时，获取元素的线程会等待队列变为非空
+
+在队列不为空时，这两个附加操作提供了4中处理方式：
+
+![image-20210504164454153](java多线程.assets\image-20210504164454153.png)
+
+JDK7中提供了7中阻塞队列：
+
+- `ArrayBlockingQueue`：一个由数组结构构成的有界阻塞队列。其支持指定获取队列元素时是否公平获取，即多个线程获取元素的顺序是否先调用先拿到，其是通过ReentrantLock冲入锁实现的。
+- `LinkedBlockingQueue`：一个由链表结构组成的有界阻塞队列
+- `PriorityBlockingQueue`：一个支持优先级排序的无解阻塞队列
+- `DelayQueue`：一个支持延迟获取队列元素的无界阻塞队列
+- `SynchronousQueue`：一个不存储元素的阻塞队列，即插入元素后需立刻消费后才能继续插入
+- `LinkedThransferQueue`：一个由链表组成的无界阻塞队列
+- `LinkedBlockingDeque`：一个由链表组成的双向阻塞队列
+
+
+
+### 阻塞队列实现原理
+
+举例，ArrayBlockingQueue使用了Condition实现
+
+```java
+    /** Condition for waiting takes */
+    private final Condition notEmpty;
+
+    /** Condition for waiting puts */
+    private final Condition notFull;
+
+ 	public void put(E e) throws InterruptedException {
+        checkNotNull(e);
+        final ReentrantLock lock = this.lock;
+        lock.lockInterruptibly();
+        try {
+            while (count == items.length)
+                notFull.await();
+            enqueue(e);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public E take() throws InterruptedException {
+        final ReentrantLock lock = this.lock;
+        lock.lockInterruptibly();
+        try {
+            while (count == 0)
+                notEmpty.await();
+            return dequeue();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+```
+
+
+
+
+
+# JAVA中的原子操作
+
+java Atomic包中提供了一些原子操作，都是通过Unsafe包实现的。
+
+Unsafe中的CAS方法：
+
+```java
+    public final native boolean compareAndSwapObject(Object var1, long var2, Object var4, Object var5);
+
+    public final native boolean compareAndSwapInt(Object var1, long var2, int var4, int var5);
+
+    public final native boolean compareAndSwapLong(Object var1, long var2, long var4, long var6);
+```
+
+
+
+## 原子更新基本类型
+
+- AtomicBoolean：原子更新布尔值
+
+  ```java
+  public final boolean compareAndSet(boolean expect, boolean update) {
+          int e = expect ? 1 : 0;
+          int u = update ? 1 : 0;
+          return unsafe.compareAndSwapInt(this, valueOffset, e, u);
+      }
+  ```
+
+  > 可见Boolean值的CAS更新是使用了compareAndSwapInt方法，原子更新char、float、double变量的更新可以使用类似的思路实现
+
+- AtomicInteger：原子更新整型
+
+- AtomicLong：原子更新长整型
+
+
+
+## 原子更新数组
+
+- AtomicIntegerArray：原子更新整型数组里的元素
+
+  ```java
+  package com.atomic;
+  
+  import java.util.concurrent.atomic.AtomicIntegerArray;
+  
+  public class AtomicArrayTest {
+  
+      static int[] arr = {1, 2};
+  
+      static AtomicIntegerArray atomicIntegerArray = new AtomicIntegerArray(arr);
+  
+      public static void main(String[] args) {
+          atomicIntegerArray.getAndSet(0, 3);
+          System.out.println(atomicIntegerArray.get(0));
+          //不改变原数组的值
+          System.out.println(arr[0]);
+      }
+  
+  }
+  
+  ```
+
+  ```txt
+  3
+  1
+  ```
+
+  查看源码是构造时复制了一份数组：
+
+  ```java
+      public AtomicIntegerArray(int[] array) {
+          // Visibility guaranteed by final field guarantees
+          this.array = array.clone();
+      }
+  ```
+
+- AtomicLongArray：原子更新长整型数组里的元素
+
+- AtomicRefrenceArray：原子更新引用类型数组里的元素
+
+
+
+## 原子更新引用
+
+- AtomicReference：原子更新引用类型
+- AtomicReferenceFieldUpdater：原子更新引用类型里的字段
+- AtomicMarkableReference：原子更新带有标记位的引用类型
+
+```java
+package com.atomic;
+
+import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.concurrent.atomic.AtomicReference;
+
+public class AtomicReferenceTest {
+
+    static AtomicReference<User> reference = new AtomicReference<>();
+
+    static User initUser = new User("老王", 40);
+
+    static AtomicMarkableReference<User> markableReference = new AtomicMarkableReference<>(initUser, true);
+
+    public static void main(String[] args) {
+        User user = new User("Jack", 30);
+        reference.set(user);
+        User updateUser = new User("Jerry", 25);
+        reference.compareAndSet(user, updateUser);
+        System.out.println(reference.get());
+
+        User user1 = markableReference.get(new boolean[]{true});
+        User user2 = markableReference.get(new boolean[]{false});
+        System.out.println(user1);
+        System.out.println(user2);
+        //更新时需带上标记位
+        User updateUser1 = new User("小花", 18);
+        markableReference.compareAndSet(
+                markableReference.getReference(),
+                updateUser1,
+                true,
+                false
+                );
+        System.out.println(markableReference.getReference());
+        System.out.println(markableReference.isMarked());
+    }
+
+    static class User {
+
+        private String name;
+
+        private Integer age;
+
+        public User(String name, Integer age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public Integer getAge() {
+            return age;
+        }
+
+        public void setAge(Integer age) {
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                    "name='" + name + '\'' +
+                    ", age=" + age +
+                    '}';
+        }
+    }
+
+}
+
+```
+
+```java
+User{name='Jerry', age=25}
+User{name='老王', age=40}
+User{name='老王', age=40}
+User{name='小花', age=18}
+false
+```
+
+
+
+## 原子更新属性（字段）
+
+- AtomicIntegerFieldUpdater：原子更新整型的字段的更新器
+- AtomicLongFieldUpdater：原子更新长整型的字段的更新器
+- AtomicStampedReference：原子更新带有版本号的引用类型。此类可用于解决Atomic包中CAS更新的ABA问题
+
+```java
+package com.atomic;
+
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+public class AtomicFieldUpdaterTest {
+
+    //创建原子类更新器
+    static AtomicIntegerFieldUpdater<NewUser> fieldUpdater = AtomicIntegerFieldUpdater.newUpdater(NewUser.class, "age");
+
+    public static void main(String[] args) {
+        NewUser conn = new NewUser("小爱", 100);
+        System.out.println(fieldUpdater.getAndIncrement(conn));
+        System.out.println(fieldUpdater.get(conn));
+    }
+
+    static class NewUser{
+
+        private String name;
+
+        //需要设置 public volatile
+        public volatile int age;
+
+        public NewUser(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return "User{" +
+                    "name='" + name + '\'' +
+                    ", age=" + age +
+                    '}';
+        }
+    }
+
+}
+
+```
+
+```txt
+100
+101
+```
+
+
+
+
+
+
 
 
 

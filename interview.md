@@ -6,6 +6,7 @@
 4、springmvc的流程
 5、es索引结构
 6、es内存存储状态
+
 7、LinkedHashMap实现LRU
 8、AtomicInteger如何保证线程安全
 9、spring何如解决循环依赖
@@ -41,6 +42,32 @@
 2. CountDownLatch
 3. 使用重入锁，维护公共系数
 4. 借助java.util.concurrent.ExecutorService#submit(java.util.concurrent.Callable<T>)返回的Future
+
+
+
+面试题记录
+
+1. 整体描述Spring
+
+2. Spring中的单例是否线程安全
+
+   分情况：
+
+   - 无状态Bean：线程安全
+   - 有状态Bean：有状态Bean是指是否用了实例属性保存数据，这种情况线程不安全，需要自己保证多线程安全：
+     - 使用锁，Class对象锁，静态字段锁
+     - 分布式锁（杀鸡用牛刀，这种使用于分布式集群场景）
+     - Bean作用域设为prototype
+
+3. 线程池创建方式，提交任务，submit方法和execute()方法区别
+
+4. mybatis #和$区别
+
+5. 浅谈分布式架构
+
+6. Spring作用域
+
+7. mq消息保证
 
 
 

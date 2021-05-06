@@ -570,3 +570,17 @@ bitmap：https://mp.weixin.qq.com/s?__biz=MzIxMjE5MTE1Nw==&mid=2653191272&idx=1&
 
 4. zookeeper中ZAB协议和Raft协议
 
+
+
+
+
+## 一般幂等技术方案有这几种:
+
+- 查询操作
+- 唯一索引
+- token机制，防止重复提交
+- 数据库的delete/update操作
+- 乐观锁
+- 悲观锁
+- Redis、zookeeper 分布式锁（以前抢红包需求，用了Redis分布式锁）
+- 状态机幂等

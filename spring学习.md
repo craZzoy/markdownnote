@@ -2667,3 +2667,24 @@ BeansException 子类型
 
 # Spring资源管理（Resource）
 
+
+
+
+
+
+
+# Spring中的事务
+
+## Spring事务传播机制
+
+https://zhuanlan.zhihu.com/p/148504094
+
+org.springframework.transaction.annotation.Propagation：
+
+- REQUIRED：没有事务创建新事务，有则使用原有事务。
+- SUPPORTS：有事务使用原事务，没有则不使用事务执行。
+- MANDATORY：有事务使用原事务，没有则抛出异常
+- REQUIRED_NEW：新增一个平行的事务，挂起已存在的事务。一个事务的回滚不会引起另外个事务的回滚。
+- NOT_SUPPORTED：不以事务执行，挂起已有事务。
+- NEVER：不以事务执行，有事务则抛出异常。
+- NESTED：嵌套性事务。嵌套性事务是指在原有事务基础上嵌套一个子事务。子事务回滚并不会引起父事务回滚，而父事务回滚同时会引起子事务回滚。

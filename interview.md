@@ -36,6 +36,7 @@
 33、线程池
 34、Synchronized与Reentrantlock区别
 35、mysql都有什么类型的锁
+
 36、线程池怎么知道线程运行完了
 
 1. java.util.concurrent.ExecutorService#isTerminated接口
@@ -591,9 +592,187 @@ bitmap：https://mp.weixin.qq.com/s?__biz=MzIxMjE5MTE1Nw==&mid=2653191272&idx=1&
    }
    ```
 
+   - REQUIRED：没有事务创建新事务，有则使用原有事务。
+   - SUPPORTS：有事务使用原事务，没有则不使用事务执行。
+   - MANDATORY：有事务使用原事务，没有则抛出异常
+   - REQUIRED_NEW：新增一个平行的事务，挂起已存在的事务。一个事务的回滚不会引起另外个事务的回滚。
+   - NOT_SUPPORTED：不以事务执行，挂起已有事务。
+   - NEVER：不以事务执行，有事务则抛出异常。
+   - NESTED：嵌套性事务。嵌套性事务是指在原有事务基础上嵌套一个子事务。子事务回滚并不会引起父事务回滚，而父事务回滚同时会引起子事务回滚。
+
+3. @Transational事务不生效情况
+
+   https://www.cnblogs.com/javastack/p/12160464.html
+
+   - 数据库引擎不支持事务
+
+   - 类没有被Spring管理
+
+     ```java
+     // @Service
+     public class TestService {
+     
+         @Transactional
+         public void Test(Order order) {
+             // update order
+         }
+     
+     }
+     ```
+
+     > 类未声明Service注解，即是未交给Spring管理
+
+   - 方法不是public的
+
+     官方文档中有一下描述：
+
+     ```java
+     Method visibility and @Transactional
+     When you use proxies, you should apply the @Transactional annotation only to methods with
+     public visibility. If you do annotate protected, private or package-visible methods with the
+     @Transactional annotation, no error is raised, but the annotated method does not exhibit the
+     configured transactional settings. If you need to annotate non-public methods, consider using
+     AspectJ (described later).
+     ```
+
+   - 调用错误
+
+     ```java
+     @Service
+     public class OrderServiceImpl implements OrderService {
+     
+         public void update(Order order) {
+             updateOrder(order);
+         }
+     
+         @Transactional
+         public void updateOrder(Order order) {
+             // update order
+         }
+     
+     }
+     ```
+
+     > update方法中未声明@Transactional注解，updateOrder中声明的不会生效
+
+     ```java
+     @Service
+     public class OrderServiceImpl implements OrderService {
+     
+         @Transactional
+         public void update(Order order) {
+             updateOrder(order);
+         }
+     
+         @Transactional(propagation = Propagation.REQUIRES_NEW)
+         public void updateOrder(Order order) {
+             // update order
+         }
+     
+     }
+     ```
+
+     > updateOrder方法中声明了生成新的并行事务
+
    
 
-3. sql优化
+   - 数据源没有配置事务管理器
 
-4. zookeeper中ZAB协议和Raft协议
+     ```java
+     @Bean
+     public PlatformTransactionManager transactionManager(DataSource dataSource) {
+         return new DataSourceTransactionManager(dataSource);
+     }
+     ```
 
+   - 不支持事务
+
+     ```java
+     @Service
+     public class OrderServiceImpl implements OrderService {
+     
+         @Transactional
+         public void update(Order order) {
+             updateOrder(order);
+         }
+     
+         @Transactional(propagation = Propagation.NOT_SUPPORTED)
+         public void updateOrder(Order order) {
+             // update order
+         }
+     
+     }
+     ```
+
+     > updateOrder不会被纳入事务管理
+
+   - 异常被抓走了
+
+     ```java
+     // @Service
+     public class OrderServiceImpl implements OrderService {
+     
+         @Transactional
+         public void updateOrder(Order order) {
+             try {
+                 // update order
+             } catch {
+     
+             }
+         }
+     
+     }
+     ```
+
+     > 异常被抓走导致事务无法回滚
+
+   - 异常类型错误
+
+     ```java
+     // @Service
+     public class OrderServiceImpl implements OrderService {
+     
+         @Transactional
+         public void updateOrder(Order order) {
+             try {
+                 // update order
+             } catch {
+                 throw new Exception("更新错误");
+             }
+         }
+     
+     }
+     ```
+
+     @Transactional默认回滚的是RuntimeException，Exception是RuntimeException的父类，导致事务回滚不生效。需如下处理：
+
+     ```java
+     @Transactional(rollbackFor = Exception.class)
+     ```
+
+     
+
+4. sql优化
+
+5. zookeeper中ZAB协议和Raft协议
+
+6. 接口怎么保证幂等性
+
+7. 
+
+8. 666
+
+
+
+
+
+## 一般幂等技术方案有这几种:
+
+- 查询操作
+- 唯一索引
+- token机制，防止重复提交
+- 数据库的delete/update操作
+- 乐观锁
+- 悲观锁
+- Redis、zookeeper 分布式锁（以前抢红包需求，用了Redis分布式锁）
+- 状态机幂等

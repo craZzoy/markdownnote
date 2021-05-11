@@ -1,4 +1,4 @@
-# 并发编程的挑战
+# mp并发编程的挑战
 
 ## 多线程一定比单线程快吗？
 
@@ -3283,7 +3283,255 @@ Thread-1 end
 
 ![image-20210505224656544](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210505224656544.png)
 
-1. 判断核心
+1. 判断核心线程里的线程是否都在执行任务。如果不是，则创建一个新的工作线程来执行任务。如果核心线程池的线程都在执行任务，则进入下一个流程。
+2. 线程池判断工作队列是否已满。如果工作队列没满，则将新提交的任务存储在这个队列中。如果队列满了，则进入下一个流程。
+3. 线程池判断线程池的线程是否都处于工作状态。如果没有，则创建一个新的工作线程执行任务。如果满了，执行饱和策略。
+
+
+
+#### ThreadPoolExecutor执行流程
+
+![image-20210511223320225](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210511223320225.png)
+
+1. 如果当前工作线程小于corePoolSize，则创建新的工作线程执行任务
+2. 如果运行的工作线程等于或多于corePoolSize，则将任务加入队列中
+3. 如果队列已满，则创建新的工作线程执行任务
+4. 如果运行的工作线程大于maximumPoolSize，执行拒绝策略（当前线程执行、抛出异常、什么都不干、挤掉队列最前的任务）
+
+java.util.concurrent.ThreadPoolExecutor#execute源码（JDK8）：
+
+```java
+    /**
+     * Executes the given task sometime in the future.  The task
+     * may execute in a new thread or in an existing pooled thread.
+     *
+     * If the task cannot be submitted for execution, either because this
+     * executor has been shutdown or because its capacity has been reached,
+     * the task is handled by the current {@code RejectedExecutionHandler}.
+     *
+     * @param command the task to execute
+     * @throws RejectedExecutionException at discretion of
+     *         {@code RejectedExecutionHandler}, if the task
+     *         cannot be accepted for execution
+     * @throws NullPointerException if {@code command} is null
+     */
+    public void execute(Runnable command) {
+        if (command == null)
+            throw new NullPointerException();
+        /*
+         * Proceed in 3 steps:
+         *
+         * 1. If fewer than corePoolSize threads are running, try to
+         * start a new thread with the given command as its first
+         * task.  The call to addWorker atomically checks runState and
+         * workerCount, and so prevents false alarms that would add
+         * threads when it shouldn't, by returning false.
+         *
+         * 2. If a task can be successfully queued, then we still need
+         * to double-check whether we should have added a thread
+         * (because existing ones died since last checking) or that
+         * the pool shut down since entry into this method. So we
+         * recheck state and if necessary roll back the enqueuing if
+         * stopped, or start a new thread if there are none.
+         *
+         * 3. If we cannot queue task, then we try to add a new
+         * thread.  If it fails, we know we are shut down or saturated
+         * and so reject the task.
+         */
+        int c = ctl.get();
+        if (workerCountOf(c) < corePoolSize) {
+            if (addWorker(command, true))
+                return;
+            c = ctl.get();
+        }
+        if (isRunning(c) && workQueue.offer(command)) {
+            int recheck = ctl.get();
+            if (! isRunning(recheck) && remove(command))
+                reject(command);
+            else if (workerCountOf(recheck) == 0) //未有工作的线程，新增工作线程，不指定任务（让其在队列中获取？）
+                addWorker(null, false);
+        }
+        else if (!addWorker(command, false))
+            reject(command);
+    }
+```
+
+工作线程：线程池创建线程时会把线程封装为工作线程java.util.concurrent.ThreadPoolExecutor.Worker，工作线程执行完指定的任务后，还会循环获取队列中的任务去执行，由java.util.concurrent.ThreadPoolExecutor#runWorker（JDK8）方法可看出：
+
+```java
+    /**
+     * Main worker run loop.  Repeatedly gets tasks from queue and
+     * executes them, while coping with a number of issues:
+     *
+     * 1. We may start out with an initial task, in which case we
+     * don't need to get the first one. Otherwise, as long as pool is
+     * running, we get tasks from getTask. If it returns null then the
+     * worker exits due to changed pool state or configuration
+     * parameters.  Other exits result from exception throws in
+     * external code, in which case completedAbruptly holds, which
+     * usually leads processWorkerExit to replace this thread.
+     *
+     * 2. Before running any task, the lock is acquired to prevent
+     * other pool interrupts while the task is executing, and then we
+     * ensure that unless pool is stopping, this thread does not have
+     * its interrupt set.
+     *
+     * 3. Each task run is preceded by a call to beforeExecute, which
+     * might throw an exception, in which case we cause thread to die
+     * (breaking loop with completedAbruptly true) without processing
+     * the task.
+     *
+     * 4. Assuming beforeExecute completes normally, we run the task,
+     * gathering any of its thrown exceptions to send to afterExecute.
+     * We separately handle RuntimeException, Error (both of which the
+     * specs guarantee that we trap) and arbitrary Throwables.
+     * Because we cannot rethrow Throwables within Runnable.run, we
+     * wrap them within Errors on the way out (to the thread's
+     * UncaughtExceptionHandler).  Any thrown exception also
+     * conservatively causes thread to die.
+     *
+     * 5. After task.run completes, we call afterExecute, which may
+     * also throw an exception, which will also cause thread to
+     * die. According to JLS Sec 14.20, this exception is the one that
+     * will be in effect even if task.run throws.
+     *
+     * The net effect of the exception mechanics is that afterExecute
+     * and the thread's UncaughtExceptionHandler have as accurate
+     * information as we can provide about any problems encountered by
+     * user code.
+     *
+     * @param w the worker
+     */
+    final void runWorker(Worker w) {
+        Thread wt = Thread.currentThread();
+        Runnable task = w.firstTask;
+        w.firstTask = null;
+        w.unlock(); // allow interrupts
+        boolean completedAbruptly = true;
+        try {
+            while (task != null || (task = getTask()) != null) {
+                w.lock();
+                // If pool is stopping, ensure thread is interrupted;
+                // if not, ensure thread is not interrupted.  This
+                // requires a recheck in second case to deal with
+                // shutdownNow race while clearing interrupt
+                if ((runStateAtLeast(ctl.get(), STOP) ||
+                     (Thread.interrupted() &&
+                      runStateAtLeast(ctl.get(), STOP))) &&
+                    !wt.isInterrupted())
+                    wt.interrupt();
+                try {
+                    beforeExecute(wt, task);
+                    Throwable thrown = null;
+                    try {
+                        task.run();
+                    } catch (RuntimeException x) {
+                        thrown = x; throw x;
+                    } catch (Error x) {
+                        thrown = x; throw x;
+                    } catch (Throwable x) {
+                        thrown = x; throw new Error(x);
+                    } finally {
+                        afterExecute(task, thrown);
+                    }
+                } finally {
+                    task = null;
+                    w.completedTasks++;
+                    w.unlock();
+                }
+            }
+            completedAbruptly = false;
+        } finally {
+            processWorkerExit(w, completedAbruptly);
+        }
+    }
+```
+
+示意图：
+
+![image-20210511223837563](D:\BaiduNetdiskDownload\markdown笔记\java多线程.assets\image-20210511223837563.png)
+
+1. 在executor()方法中创建一个工作线程执行任务
+2. 执行完指定任务后从队列中循环获取任务执行
+
+
+
+### 线程池使用
+
+#### 线程池创建
+
+通常使用Executors框架创建，也可使用ThreadPoolExecutor构造器自己创建：
+
+```java
+    /**
+     * Creates a new {@code ThreadPoolExecutor} with the given initial
+     * parameters.
+     *
+     * @param corePoolSize the number of threads to keep in the pool, even
+     *        if they are idle, unless {@code allowCoreThreadTimeOut} is set
+     * @param maximumPoolSize the maximum number of threads to allow in the
+     *        pool
+     * @param keepAliveTime when the number of threads is greater than
+     *        the core, this is the maximum time that excess idle threads
+     *        will wait for new tasks before terminating.
+     * @param unit the time unit for the {@code keepAliveTime} argument
+     * @param workQueue the queue to use for holding tasks before they are
+     *        executed.  This queue will hold only the {@code Runnable}
+     *        tasks submitted by the {@code execute} method.
+     * @param threadFactory the factory to use when the executor
+     *        creates a new thread
+     * @param handler the handler to use when execution is blocked
+     *        because the thread bounds and queue capacities are reached
+     * @throws IllegalArgumentException if one of the following holds:<br>
+     *         {@code corePoolSize < 0}<br>
+     *         {@code keepAliveTime < 0}<br>
+     *         {@code maximumPoolSize <= 0}<br>
+     *         {@code maximumPoolSize < corePoolSize}
+     * @throws NullPointerException if {@code workQueue}
+     *         or {@code threadFactory} or {@code handler} is null
+     */
+    public ThreadPoolExecutor(int corePoolSize,
+                              int maximumPoolSize,
+                              long keepAliveTime,
+                              TimeUnit unit,
+                              BlockingQueue<Runnable> workQueue,
+                              ThreadFactory threadFactory,
+                              RejectedExecutionHandler handler) {
+        if (corePoolSize < 0 ||
+            maximumPoolSize <= 0 ||
+            maximumPoolSize < corePoolSize ||
+            keepAliveTime < 0)
+            throw new IllegalArgumentException();
+        if (workQueue == null || threadFactory == null || handler == null)
+            throw new NullPointerException();
+        this.acc = System.getSecurityManager() == null ?
+                null :
+                AccessController.getContext();
+        this.corePoolSize = corePoolSize;
+        this.maximumPoolSize = maximumPoolSize;
+        this.workQueue = workQueue;
+        this.keepAliveTime = unit.toNanos(keepAliveTime);
+        this.threadFactory = threadFactory;
+        this.handler = handler;
+    }
+```
+
+
+
+#### 向线程池提交任务
+
+- java.util.concurrent.ThreadPoolExecutor#execute：执行任务，不带返回值
+- java.util.concurrent.AbstractExecutorService#submit(java.lang.Runnable)：执行任务，带返回值
+
+
+
+#### 关闭线程池
+
+
+
+#### 合理地配置线程池
+
+
 
 ### 核心API
 

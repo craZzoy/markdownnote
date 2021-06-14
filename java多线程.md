@@ -3527,9 +3527,42 @@ java.util.concurrent.ThreadPoolExecutor#execute源码（JDK8）：
 
 #### 关闭线程池
 
+- java.util.concurrent.ThreadPoolExecutor#shutdown：将线程池状态设置为SHOTDOWM状态，然后中断闲置线程。
+- java.util.concurrent.ThreadPoolExecutor#shutdownNow：将线程池状态设置为SHOTDOWM状态，然后尝试中断所有所有正在执行或者停止任务的线程。
+
+两者原理都是遍历线程池中所有线程，然后逐个调用线程的interrupt方法来中断线程，所有无法响应中断的任务可能永远无法停止。
+
 
 
 #### 合理地配置线程池
+
+要想合理地配置线程池，就必须分析任务特性：
+
+- 任务的性质
+  - CPU密集型：应配置尽可能小的线程，如配置N(cpu) + 1个线程的线程池
+  - IO密集型：由于并不是一直在执行任务，应配置尽可能多的线程，如2*N(cpu) 
+  - 混合型：可拆解为一个CPU密集型和IO密集型任务，如果拆解后两个任务的执行时间相差太大，则没必要拆解（？）
+- 任务的优先级：可使用PriorityBlockingQueue 优先级队列处理
+- 任务的执行时间
+- 任务的依赖性：是否依赖其他系统资源，如数据库连接。因为这是IO密集型任务，所以应分配尽可能大的线程
+
+
+
+#### 线程池的监控
+
+线程池提供了一些属性用于查看线程池当前的一些状况：
+
+- taskCount：线程池需要执行的任务数量
+- completedTaskCount：完成任务数量
+- largestPoolSize：线程池曾经创建过的最多线程数量
+- getPoolSize：线程池的线程数量
+- getActiveCount：获取活动的线程数
+
+也可以通过拓展线程池的方法进行监控，如重写以下方法：
+
+- beforeExecute
+- afterExecute
+- terminated
 
 
 

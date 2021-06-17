@@ -358,6 +358,8 @@ zset类型
 
 - 打标签：用户等级
 
+https://xie.infoq.cn/article/60f25d45fc36f84056ad94b70
+
 
 
 # redis的内部原理
@@ -1825,4 +1827,17 @@ https://zhuanlan.zhihu.com/p/346651831
 ## 缓存击穿
 
 ## 缓存穿透
+
+
+
+
+
+常见面试题
+
+1. redis中如何保证原子操作
+   - pipeline
+   - lua脚本
+2. ddd
+
+
 

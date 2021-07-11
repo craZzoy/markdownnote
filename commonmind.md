@@ -2067,3 +2067,10 @@ https://www.cnblogs.com/cjsblog/p/9038838.html
 
 1. Run `bin/elasticsearch` (or `bin\elasticsearch.bat` on Windows)
 2. Run `curl http://localhost:9200/` or `Invoke-RestMethod http://localhost:9200` with PowerShell
+
+
+
+# 日常问题记录
+
+关于JSR-303和@Validated，能否指定需要校验的字段
+

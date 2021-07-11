@@ -1827,7 +1827,7 @@ public class BeanGarbageCollectionDemo {
 
 ## 依赖查找今生前世
 
-![image-20210222220631908](D:\BaiduNetdiskDownload\markdown笔记\spring学习.assets\image-20210222220631908.png)
+![image-20210222220631908](spring学习.assets\image-20210222220631908.png)
 
 org.springframework.beans.factory.ObjectProvider
 
@@ -2004,7 +2004,7 @@ ListableBeanFactory接口
 
 注意`ConfigurableListableBeanFactory`的依赖关系：
 
-![image-20210322220220538](D:\BaiduNetdiskDownload\markdown笔记\spring学习.assets\image-20210322220220538.png)
+![image-20210322220220538](spring学习.assets\image-20210322220220538.png)
 
 > 可见，ConfiguratableListbleBeanFactory具备单一类型（BeanFactory）、集合类型（ListableBeanFactory）、层次性类型（HierarchicalBeanFactory）的查找能力。
 

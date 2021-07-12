@@ -1168,7 +1168,9 @@ nginx frps frpc nginx
 > Bean Validation的主页：[http://beanvalidation.org](http://beanvalidation.org/)
 > Bean Validation的参考实现：https://github.com/hibernate/hibernate-validator
 
-
+- 分组校验
+- 嵌套校验
+- 自定义校验注解
 
 
 

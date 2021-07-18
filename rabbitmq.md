@@ -434,10 +434,10 @@ rabbitTemplate.send("GP_TTL_EXCHANGE", "gupao.ttl", message);
 ### 死信队列
 消息在某些情况下会成为死信，队列在创建的时候可以指定死信交换机DLX（Dead Letter Exchange）。死信交换机绑定的队列称为死信队列DLQ（Dead Letter Queue），DLX其实是普通的交换机，DLQ也是普通的队列
 
-什么情况消息会变成私信？
+什么情况消息会变成死信？
  - 消息过期
  - 消息被消费者拒绝并未设置重回队列：(NACK || Reject ) && requeue == false
- - 队列达到最大长度，超过Max length或者max length bytes，最先入队的消息会先发到私信交换机
+ - 队列达到最大长度，超过Max length或者max length bytes，最先入队的消息会先发到死信交换机
 
 ```java
 package com.demo.config;
@@ -1139,10 +1139,9 @@ rabbitmq提供了消费者的消息确认机制以使服务端能够知道消费
 ### 消费者回调
 
 - 调用生产者API
-
 - 发送相应信息给生产者
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/20190923132415343.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NpbmF0XzM1NTAwMDYz,size_16,color_FFFFFF,t_70)
-  [外链图片转存失败(img-n9GayPc3-1569216134269)(D:\BaiduNetdiskDownload\markdown笔记\rabbitmq(一)].assets\1569214573343.png)
+  [外链图片转存失败(img-n9GayPc3-1569216134269)(rabbitmq.assets\1569214573343.png)
 
 ### 补偿机制
 
@@ -1222,7 +1221,7 @@ rabbitmq时基于erlang开发的，而erlang天生具有分布式特性，所以
 
 ​	普通集群模式下，不同节点之间只会相互同步元数据
 
-![1569225951794](rabbitmq(一).assets\1569225951794.png)
+![1569225951794](rabbitmq.assets\1569225951794.png)
 
 在其中，队列的内容是不会相互同步的
 

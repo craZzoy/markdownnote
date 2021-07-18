@@ -30,6 +30,8 @@ domain中实体一般都是无状态的。只是对应映射数据库数据，�
 
 # Mybatis
 
+基于版本：3.5.7
+
 ## 入门
 
 ### mybatis整体架构
@@ -756,3 +758,486 @@ public class TypeAliasRegistry {
 
 ### 日志模块
 
+常用日志框架：
+
+- Log4j
+- Log4j2
+- Apache Commons Log
+- java.util.logging
+- slf4j
+
+
+
+mybatis提供的统一日志适配接口：
+
+org.apache.ibatis.logging.Log
+
+```java
+public interface Log {
+
+  boolean isDebugEnabled();
+
+  boolean isTraceEnabled();
+
+  void error(String s, Throwable e);
+
+  void error(String s);
+
+  void debug(String s);
+
+  void trace(String s);
+
+  void warn(String s);
+
+}
+```
+
+适配各种日志框架：
+
+![哪个台](D:\BaiduNetdiskDownload\markdown笔记\orm.assets\image-20210711230258746.png)
+
+org.apache.ibatis.logging.LogFactory的静态代码块会尝试初始化使用哪种适配的日志框架
+
+```java
+public final class LogFactory {
+
+  /**
+   * Marker to be used by logging implementations that support markers.
+   */
+  public static final String MARKER = "MYBATIS";
+
+  private static Constructor<? extends Log> logConstructor;
+
+  static {
+    tryImplementation(LogFactory::useSlf4jLogging);
+    tryImplementation(LogFactory::useCommonsLogging);
+    tryImplementation(LogFactory::useLog4J2Logging);
+    tryImplementation(LogFactory::useLog4JLogging);
+    tryImplementation(LogFactory::useJdkLogging);
+    tryImplementation(LogFactory::useNoLogging);
+  }
+    ...
+}
+```
+
+```java
+  private static void tryImplementation(Runnable runnable) {
+    if (logConstructor == null) {
+      try {
+        runnable.run();
+      } catch (Throwable t) {
+        // ignore
+      }
+    }
+  }
+```
+
+```java
+  public static synchronized void useJdkLogging() {
+    setImplementation(org.apache.ibatis.logging.jdk14.Jdk14LoggingImpl.class);
+  }
+```
+
+```java
+  private static void setImplementation(Class<? extends Log> implClass) {
+    try {
+      Constructor<? extends Log> candidate = implClass.getConstructor(String.class);
+      Log log = candidate.newInstance(LogFactory.class.getName());
+      if (log.isDebugEnabled()) {
+        log.debug("Logging initialized using '" + implClass + "' adapter.");
+      }
+      logConstructor = candidate;
+    } catch (Throwable t) {
+      throw new LogException("Error setting Log implementation.  Cause: " + t, t);
+    }
+  }
+```
+
+
+
+#### 代理模式
+
+jdk动态代理与cglib动态代理
+
+
+
+#### jdbc调试
+
+- org.apache.ibatis.logging.jdbc.BaseJdbcLogger
+  - org.apache.ibatis.logging.jdbc.ConnectionLogger
+  - org.apache.ibatis.logging.jdbc.PreparedStatementLogger
+  - org.apache.ibatis.logging.jdbc.ResultSetLogger
+  - org.apache.ibatis.logging.jdbc.StatementLogger
+
+通过对核心的jdbc处理类进行代理，结合org.apache.ibatis.logging.Log打印调试信息，如输入参数、执行sql、返回结果等。如ConnectionLogger：
+
+```java
+package org.apache.ibatis.logging.jdbc;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+
+import org.apache.ibatis.logging.Log;
+import org.apache.ibatis.reflection.ExceptionUtil;
+
+/**
+ * Connection proxy to add logging.
+ *
+ * @author Clinton Begin
+ * @author Eduardo Macarron
+ *
+ */
+public final class ConnectionLogger extends BaseJdbcLogger implements InvocationHandler {
+
+  private final Connection connection;
+
+  private ConnectionLogger(Connection conn, Log statementLog, int queryStack) {
+    super(statementLog, queryStack);
+    this.connection = conn;
+  }
+
+  @Override
+  public Object invoke(Object proxy, Method method, Object[] params)
+      throws Throwable {
+    try {
+      if (Object.class.equals(method.getDeclaringClass())) {
+        return method.invoke(this, params);
+      }
+      if ("prepareStatement".equals(method.getName()) || "prepareCall".equals(method.getName())) {
+        if (isDebugEnabled()) {
+          debug(" Preparing: " + removeExtraWhitespace((String) params[0]), true);
+        }
+        PreparedStatement stmt = (PreparedStatement) method.invoke(connection, params);
+        stmt = PreparedStatementLogger.newInstance(stmt, statementLog, queryStack);
+        return stmt;
+      } else if ("createStatement".equals(method.getName())) {
+        Statement stmt = (Statement) method.invoke(connection, params);
+        stmt = StatementLogger.newInstance(stmt, statementLog, queryStack);
+        return stmt;
+      } else {
+        return method.invoke(connection, params);
+      }
+    } catch (Throwable t) {
+      throw ExceptionUtil.unwrapThrowable(t);
+    }
+  }
+
+  /**
+   * Creates a logging version of a connection.
+   *
+   * @param conn
+   *          the original connection
+   * @param statementLog
+   *          the statement log
+   * @param queryStack
+   *          the query stack
+   * @return the connection with logging
+   */
+  public static Connection newInstance(Connection conn, Log statementLog, int queryStack) {
+    InvocationHandler handler = new ConnectionLogger(conn, statementLog, queryStack);
+    ClassLoader cl = Connection.class.getClassLoader();
+    return (Connection) Proxy.newProxyInstance(cl, new Class[]{Connection.class}, handler);
+  }
+
+  /**
+   * return the wrapped connection.
+   *
+   * @return the connection
+   */
+  public Connection getConnection() {
+    return connection;
+  }
+
+}
+
+```
+
+ConnectionLogger会被org.apache.ibatis.executor.BaseExecutor#getConnection方法调用：
+
+```java
+  protected Connection getConnection(Log statementLog) throws SQLException {
+    Connection connection = transaction.getConnection();
+    if (statementLog.isDebugEnabled()) {
+      return ConnectionLogger.newInstance(connection, statementLog, queryStack);
+    } else {
+      return connection;
+    }
+  }
+```
+
+
+
+### 资源加载
+
+#### ClassLoaderWrapper
+
+ClassLoader的包装器，其中维护多个ClassLoader，查找资源时有序的调用其中的多个ClassLoader查找资源。如org.apache.ibatis.io.ClassLoaderWrapper#getResourceAsStream(java.lang.String, java.lang.ClassLoader[])
+
+```java
+  /**
+   * Try to get a resource from a group of classloaders
+   *
+   * @param resource    - the resource to get
+   * @param classLoader - the classloaders to examine
+   * @return the resource or null
+   */
+  InputStream getResourceAsStream(String resource, ClassLoader[] classLoader) {
+    for (ClassLoader cl : classLoader) {
+      if (null != cl) {
+
+        // try to find the resource as passed
+        InputStream returnValue = cl.getResourceAsStream(resource);
+
+        // now, some class loaders want this leading "/", so we'll add it and try again if we didn't find the resource
+        if (null == returnValue) {
+          returnValue = cl.getResourceAsStream("/" + resource);
+        }
+
+        if (null != returnValue) {
+          return returnValue;
+        }
+      }
+    }
+    return null;
+  }
+```
+
+
+
+#### ResolverUtil
+
+查找指定包下的类
+
+核心方法：org.apache.ibatis.io.ResolverUtil#find
+
+```java
+  /**
+   * Scans for classes starting at the package provided and descending into subpackages.
+   * Each class is offered up to the Test as it is discovered, and if the Test returns
+   * true the class is retained.  Accumulated classes can be fetched by calling
+   * {@link #getClasses()}.
+   *
+   * @param test
+   *          an instance of {@link Test} that will be used to filter classes
+   * @param packageName
+   *          the name of the package from which to start scanning for classes, e.g. {@code net.sourceforge.stripes}
+   * @return the resolver util
+   */
+  public ResolverUtil<T> find(Test test, String packageName) {
+    String path = getPackagePath(packageName);
+
+    try {
+      List<String> children = VFS.getInstance().list(path);
+      for (String child : children) {
+        if (child.endsWith(".class")) {
+          addIfMatching(test, child);
+        }
+      }
+    } catch (IOException ioe) {
+      log.error("Could not read package: " + packageName, ioe);
+    }
+
+    return this;
+  }
+```
+
+条件接口：
+
+- org.apache.ibatis.io.ResolverUtil.Test
+
+  ```java
+    /**
+     * A simple interface that specifies how to test classes to determine if they
+     * are to be included in the results produced by the ResolverUtil.
+     */
+    public interface Test {
+  
+      /**
+       * Will be called repeatedly with candidate classes. Must return True if a class
+       * is to be included in the results, false otherwise.
+       *
+       * @param type
+       *          the type
+       * @return true, if successful
+       */
+      boolean matches(Class<?> type);
+    }
+  ```
+
+  - org.apache.ibatis.io.ResolverUtil.IsA：继承某个类或者实现某个接口
+
+    ```java
+      /**
+       * A Test that checks to see if each class is assignable to the provided class. Note
+       * that this test will match the parent type itself if it is presented for matching.
+       */
+      public static class IsA implements Test {
+    
+        /** The parent. */
+        private Class<?> parent;
+    
+        /**
+         * Constructs an IsA test using the supplied Class as the parent class/interface.
+         *
+         * @param parentType
+         *          the parent type
+         */
+        public IsA(Class<?> parentType) {
+          this.parent = parentType;
+        }
+    
+        /** Returns true if type is assignable to the parent type supplied in the constructor. */
+        @Override
+        public boolean matches(Class<?> type) {
+          return type != null && parent.isAssignableFrom(type);
+        }
+    
+        @Override
+        public String toString() {
+          return "is assignable to " + parent.getSimpleName();
+        }
+      }
+    ```
+
+  - org.apache.ibatis.io.ResolverUtil.AnnotatedWith：包含指定注解
+
+    ```java
+      /**
+       * A Test that checks to see if each class is annotated with a specific annotation. If it
+       * is, then the test returns true, otherwise false.
+       */
+      public static class AnnotatedWith implements Test {
+    
+        /** The annotation. */
+        private Class<? extends Annotation> annotation;
+    
+        /**
+         * Constructs an AnnotatedWith test for the specified annotation type.
+         *
+         * @param annotation
+         *          the annotation
+         */
+        public AnnotatedWith(Class<? extends Annotation> annotation) {
+          this.annotation = annotation;
+        }
+    
+        /** Returns true if the type is annotated with the class provided to the constructor. */
+        @Override
+        public boolean matches(Class<?> type) {
+          return type != null && type.isAnnotationPresent(annotation);
+        }
+    
+        @Override
+        public String toString() {
+          return "annotated with @" + annotation.getSimpleName();
+        }
+      }
+    ```
+
+    
+
+#### VFS
+
+virtual file system，用来查找指定路径下的资源
+
+- org.apache.ibatis.io.VFS
+
+  - 常用方法
+    - org.apache.ibatis.io.VFS#list(java.net.URL, java.lang.String)：指定URL和包下的资源
+    - org.apache.ibatis.io.VFS#list(java.lang.String)：指定URL下的资源
+
+  - 实现类
+    - org.apache.ibatis.io.DefaultVFS
+    - org.apache.ibatis.io.JBoss6VFS
+
+值得注意的是VFS单例是通过静态内部类实现的
+
+```java
+  /** Singleton instance holder. */
+  private static class VFSHolder {
+    static final VFS INSTANCE = createVFS();
+
+    @SuppressWarnings("unchecked")
+    static VFS createVFS() {
+      // Try the user implementations first, then the built-ins
+      List<Class<? extends VFS>> impls = new ArrayList<>();
+      impls.addAll(USER_IMPLEMENTATIONS);
+      impls.addAll(Arrays.asList((Class<? extends VFS>[]) IMPLEMENTATIONS));
+
+      // Try each implementation class until a valid one is found
+      VFS vfs = null;
+      for (int i = 0; vfs == null || !vfs.isValid(); i++) {
+        Class<? extends VFS> impl = impls.get(i);
+        try {
+          vfs = impl.getDeclaredConstructor().newInstance();
+          if (!vfs.isValid() && log.isDebugEnabled()) {
+            log.debug("VFS implementation " + impl.getName()
+                + " is not valid in this environment.");
+          }
+        } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+          log.error("Failed to instantiate " + impl, e);
+          return null;
+        }
+      }
+
+      if (log.isDebugEnabled()) {
+        log.debug("Using VFS adapter " + vfs.getClass().getName());
+      }
+
+      return vfs;
+    }
+  }
+```
+
+org.apache.ibatis.io.VFS#getInstance:
+
+```java
+
+  /**
+   * Get the singleton {@link VFS} instance. If no {@link VFS} implementation can be found for the current environment,
+   * then this method returns null.
+   *
+   * @return single instance of VFS
+   */
+  public static VFS getInstance() {
+    return VFSHolder.INSTANCE;
+  }
+```
+
+
+
+### DataSource
+
+未记录（需重点分析）
+
+
+
+### Transation
+
+- org.apache.ibatis.transaction.Transaction
+  - org.apache.ibatis.transaction.jdbc.JdbcTransaction
+  - org.apache.ibatis.transaction.managed.ManagedTransaction：生命周期是交给容器管理的
+
+跟DataSource一样，使用了工厂方法模式：
+
+- org.apache.ibatis.transaction.TransactionFactory
+  - org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory
+  - org.apache.ibatis.transaction.managed.ManagedTransactionFactory
+
+
+
+### Binding模块
+
+
+
+#### ParamNameResolver
+
+参数名称解析类org.apache.ibatis.reflection.ParamNameResolver
+
+
+
+### 缓存模块

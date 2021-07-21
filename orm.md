@@ -36,7 +36,7 @@ domain中实体一般都是无状态的。只是对应映射数据库数据，�
 
 ### mybatis整体架构
 
-![image-20210704180151045](D:\BaiduNetdiskDownload\markdown笔记\orm.assets\image-20210704180151045.png)
+![image-20210704180151045](orm.assets\image-20210704180151045.png)
 
 
 
@@ -52,7 +52,7 @@ XML解析
 
 #### XPATH
 
-![image-20210708222020269](D:\BaiduNetdiskDownload\markdown笔记\orm.assets\image-20210708222020269.png)
+![image-20210708222020269](orm.assets\image-20210708222020269.png)
 
 #### 反射工具箱
 
@@ -64,7 +64,7 @@ XML解析
 
 ##### TypeParameterResolver
 
-![image-20210710210239659](D:\BaiduNetdiskDownload\markdown笔记\orm.assets\image-20210710210239659.png)
+![image-20210710210239659](orm.assets\image-20210710210239659.png)
 
 java.lang.reflect.Type类型
 
@@ -241,7 +241,205 @@ org.apache.ibatis.reflection.TypeParameterResolver#resolveFieldType
 
 org.apache.ibatis.reflection.factory.ObjectFactory
 
+```java
+/**
+ *    Copyright 2009-2020 the original author or authors.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+package org.apache.ibatis.reflection.factory;
+
+import java.util.List;
+import java.util.Properties;
+
+/**
+ * MyBatis uses an ObjectFactory to create all needed new Objects.
+ *
+ * @author Clinton Begin
+ */
+public interface ObjectFactory {
+
+  /**
+   * Sets configuration properties.
+   * @param properties configuration properties
+   */
+  default void setProperties(Properties properties) {
+    // NOP
+  }
+
+  /**
+   * Creates a new object with default constructor.
+   *
+   * @param <T>
+   *          the generic type
+   * @param type
+   *          Object type
+   * @return the t
+   */
+  <T> T create(Class<T> type);
+
+  /**
+   * Creates a new object with the specified constructor and params.
+   *
+   * @param <T>
+   *          the generic type
+   * @param type
+   *          Object type
+   * @param constructorArgTypes
+   *          Constructor argument types
+   * @param constructorArgs
+   *          Constructor argument values
+   * @return the t
+   */
+  <T> T create(Class<T> type, List<Class<?>> constructorArgTypes, List<Object> constructorArgs);
+
+  /**
+   * Returns true if this object can have a set of other objects.
+   * It's main purpose is to support non-java.util.Collection objects like Scala collections.
+   *
+   * @param <T>
+   *          the generic type
+   * @param type
+   *          Object type
+   * @return whether it is a collection or not
+   * @since 3.1.0
+   */
+  <T> boolean isCollection(Class<T> type);
+
+}
+
+```
+
 - org.apache.ibatis.reflection.factory.DefaultObjectFactory
+
+  ```java
+  /**
+   *    Copyright 2009-2019 the original author or authors.
+   *
+   *    Licensed under the Apache License, Version 2.0 (the "License");
+   *    you may not use this file except in compliance with the License.
+   *    You may obtain a copy of the License at
+   *
+   *       http://www.apache.org/licenses/LICENSE-2.0
+   *
+   *    Unless required by applicable law or agreed to in writing, software
+   *    distributed under the License is distributed on an "AS IS" BASIS,
+   *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   *    See the License for the specific language governing permissions and
+   *    limitations under the License.
+   */
+  package org.apache.ibatis.reflection.factory;
+  
+  import java.io.Serializable;
+  import java.lang.reflect.Constructor;
+  import java.util.ArrayList;
+  import java.util.Collection;
+  import java.util.Collections;
+  import java.util.HashMap;
+  import java.util.HashSet;
+  import java.util.List;
+  import java.util.Map;
+  import java.util.Optional;
+  import java.util.Set;
+  import java.util.SortedSet;
+  import java.util.TreeSet;
+  import java.util.stream.Collectors;
+  
+  import org.apache.ibatis.reflection.ReflectionException;
+  import org.apache.ibatis.reflection.Reflector;
+  
+  /**
+   * @author Clinton Begin
+   */
+  public class DefaultObjectFactory implements ObjectFactory, Serializable {
+  
+    private static final long serialVersionUID = -8855120656740914948L;
+  
+    @Override
+    public <T> T create(Class<T> type) {
+      return create(type, null, null);
+    }
+  
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T create(Class<T> type, List<Class<?>> constructorArgTypes, List<Object> constructorArgs) {
+      Class<?> classToCreate = resolveInterface(type);
+      // we know types are assignable
+      return (T) instantiateClass(classToCreate, constructorArgTypes, constructorArgs);
+    }
+  
+    private  <T> T instantiateClass(Class<T> type, List<Class<?>> constructorArgTypes, List<Object> constructorArgs) {
+      try {
+        Constructor<T> constructor;
+        if (constructorArgTypes == null || constructorArgs == null) {
+          constructor = type.getDeclaredConstructor();
+          try {
+            return constructor.newInstance();
+          } catch (IllegalAccessException e) {
+            if (Reflector.canControlMemberAccessible()) {
+              constructor.setAccessible(true);
+              return constructor.newInstance();
+            } else {
+              throw e;
+            }
+          }
+        }
+        constructor = type.getDeclaredConstructor(constructorArgTypes.toArray(new Class[0]));
+        try {
+          return constructor.newInstance(constructorArgs.toArray(new Object[0]));
+        } catch (IllegalAccessException e) {
+          if (Reflector.canControlMemberAccessible()) {
+            constructor.setAccessible(true);
+            return constructor.newInstance(constructorArgs.toArray(new Object[0]));
+          } else {
+            throw e;
+          }
+        }
+      } catch (Exception e) {
+        String argTypes = Optional.ofNullable(constructorArgTypes).orElseGet(Collections::emptyList)
+            .stream().map(Class::getSimpleName).collect(Collectors.joining(","));
+        String argValues = Optional.ofNullable(constructorArgs).orElseGet(Collections::emptyList)
+            .stream().map(String::valueOf).collect(Collectors.joining(","));
+        throw new ReflectionException("Error instantiating " + type + " with invalid types (" + argTypes + ") or values (" + argValues + "). Cause: " + e, e);
+      }
+    }
+  
+    protected Class<?> resolveInterface(Class<?> type) {
+      Class<?> classToCreate;
+      if (type == List.class || type == Collection.class || type == Iterable.class) {
+        classToCreate = ArrayList.class;
+      } else if (type == Map.class) {
+        classToCreate = HashMap.class;
+      } else if (type == SortedSet.class) { // issue #510 Collections Support
+        classToCreate = TreeSet.class;
+      } else if (type == Set.class) {
+        classToCreate = HashSet.class;
+      } else {
+        classToCreate = type;
+      }
+      return classToCreate;
+    }
+  
+    @Override
+    public <T> boolean isCollection(Class<T> type) {
+      return Collection.class.isAssignableFrom(type);
+    }
+  
+  }
+  
+  ```
+
+  
 
 
 
@@ -465,11 +663,11 @@ public interface ObjectWrapper {
 
 用于javaType和jdbcType类型之间的转换
 
-![image-20210711174800382](D:\BaiduNetdiskDownload\markdown笔记\orm.assets\image-20210711174800382.png)
+![image-20210711174800382](orm.assets\image-20210711174800382.png)
 
 核心API
 
-![image-20210711175722369](D:\BaiduNetdiskDownload\markdown笔记\orm.assets\image-20210711175722369.png)
+![image-20210711175722369](orm.assets\image-20210711175722369.png)
 
 - org.apache.ibatis.type.TypeHandler：定义设置参数（javaType转jdbcType）方法，获取结果方法（jdbcType转javaType）
 
@@ -726,7 +924,131 @@ public interface ObjectWrapper {
 
 注册管理对应jdbcType和javaType对应的TypeHandler
 
+核心接口：org.apache.ibatis.type.TypeHandler
 
+```java
+/**
+ *    Copyright 2009-2020 the original author or authors.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+package org.apache.ibatis.type;
+
+import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+/**
+ * @author Clinton Begin
+ */
+public interface TypeHandler<T> {
+
+  void setParameter(PreparedStatement ps, int i, T parameter, JdbcType jdbcType) throws SQLException;
+
+  /**
+   * Gets the result.
+   *
+   * @param rs
+   *          the rs
+   * @param columnName
+   *          Colunm name, when configuration <code>useColumnLabel</code> is <code>false</code>
+   * @return the result
+   * @throws SQLException
+   *           the SQL exception
+   */
+  T getResult(ResultSet rs, String columnName) throws SQLException;
+
+  T getResult(ResultSet rs, int columnIndex) throws SQLException;
+
+  T getResult(CallableStatement cs, int columnIndex) throws SQLException;
+
+}
+
+```
+
+- setParameter：将java类型参数加入java.sql.PreparedStatement参数中
+- getResult：获取java类型的结果
+
+如：org.apache.ibatis.type.IntegerTypeHandler实现
+
+```java
+/**
+ *    Copyright 2009-2018 the original author or authors.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+package org.apache.ibatis.type;
+
+import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+/**
+ * @author Clinton Begin
+ */
+public class IntegerTypeHandler extends BaseTypeHandler<Integer> {
+
+  @Override
+  public void setNonNullParameter(PreparedStatement ps, int i, Integer parameter, JdbcType jdbcType)
+      throws SQLException {
+    ps.setInt(i, parameter);
+  }
+
+  @Override
+  public Integer getNullableResult(ResultSet rs, String columnName)
+      throws SQLException {
+    int result = rs.getInt(columnName);
+    return result == 0 && rs.wasNull() ? null : result;
+  }
+
+  @Override
+  public Integer getNullableResult(ResultSet rs, int columnIndex)
+      throws SQLException {
+    int result = rs.getInt(columnIndex);
+    return result == 0 && rs.wasNull() ? null : result;
+  }
+
+  @Override
+  public Integer getNullableResult(CallableStatement cs, int columnIndex)
+      throws SQLException {
+    int result = cs.getInt(columnIndex);
+    return result == 0 && cs.wasNull() ? null : result;
+  }
+}
+
+```
+
+org.apache.ibatis.type.TypeHandlerRegistry中主要维护了JdbcType、JavaType与TypeHandler的映射集合
+
+```java
+ 
+  private final Map<JdbcType, TypeHandler<?>>  jdbcTypeHandlerMap = new EnumMap<>(JdbcType.class);
+  private final Map<Type, Map<JdbcType, TypeHandler<?>>> typeHandlerMap = new ConcurrentHashMap<>();
+  private final TypeHandler<Object> unknownTypeHandler;
+  private final Map<Class<?>, TypeHandler<?>> allTypeHandlersMap = new HashMap<>();
+```
 
 ##### TypeAliasRegistry
 
@@ -752,6 +1074,28 @@ public class TypeAliasRegistry {
   }
 }
 ...
+```
+
+构造方法中有初始化：
+
+```java
+  public TypeHandlerRegistry(Configuration configuration) {
+    this.unknownTypeHandler = new UnknownTypeHandler(configuration);
+
+    register(Boolean.class, new BooleanTypeHandler());
+    register(boolean.class, new BooleanTypeHandler());
+    register(JdbcType.BOOLEAN, new BooleanTypeHandler());
+    register(JdbcType.BIT, new BooleanTypeHandler());
+
+    register(Byte.class, new ByteTypeHandler());
+    register(byte.class, new ByteTypeHandler());
+    register(JdbcType.TINYINT, new ByteTypeHandler());
+
+    register(Short.class, new ShortTypeHandler());
+    register(short.class, new ShortTypeHandler());
+    register(JdbcType.SMALLINT, new ShortTypeHandler());
+      ...
+  }
 ```
 
 
@@ -794,7 +1138,7 @@ public interface Log {
 
 适配各种日志框架：
 
-![哪个台](D:\BaiduNetdiskDownload\markdown笔记\orm.assets\image-20210711230258746.png)
+![哪个台](orm.assets\image-20210711230258746.png)
 
 org.apache.ibatis.logging.LogFactory的静态代码块会尝试初始化使用哪种适配的日志框架
 
@@ -1138,7 +1482,18 @@ ClassLoader的包装器，其中维护多个ClassLoader，查找资源时有序�
       }
     ```
 
-    
+
+
+
+#### Resources
+
+org.apache.ibatis.io.Resources
+
+提供一些解析资源的方法：
+
+![image-20210721112401299](D:\markdownfiles\orm.assets\image-20210721112401299.png)
+
+
 
 #### VFS
 
@@ -1212,6 +1567,129 @@ org.apache.ibatis.io.VFS#getInstance:
 
 ### DataSource
 
+基础接口：javax.sql.DataSource
+
+```java
+package javax.sql;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Wrapper;
+
+/**
+ * <p>A factory for connections to the physical data source that this
+ * {@code DataSource} object represents.  An alternative to the
+ * {@code DriverManager} facility, a {@code DataSource} object
+ * is the preferred means of getting a connection. An object that implements
+ * the {@code DataSource} interface will typically be
+ * registered with a naming service based on the
+ * Java&trade; Naming and Directory (JNDI) API.
+ * <P>
+ * The {@code DataSource} interface is implemented by a driver vendor.
+ * There are three types of implementations:
+ * <OL>
+ *   <LI>Basic implementation -- produces a standard {@code Connection}
+ *       object
+ *   <LI>Connection pooling implementation -- produces a {@code Connection}
+ *       object that will automatically participate in connection pooling.  This
+ *       implementation works with a middle-tier connection pooling manager.
+ *   <LI>Distributed transaction implementation -- produces a
+ *       {@code Connection} object that may be used for distributed
+ *       transactions and almost always participates in connection pooling.
+ *       This implementation works with a middle-tier
+ *       transaction manager and almost always with a connection
+ *       pooling manager.
+ * </OL>
+ * <P>
+ * A {@code DataSource} object has properties that can be modified
+ * when necessary.  For example, if the data source is moved to a different
+ * server, the property for the server can be changed.  The benefit is that
+ * because the data source's properties can be changed, any code accessing
+ * that data source does not need to be changed.
+ * <P>
+ * A driver that is accessed via a {@code DataSource} object does not
+ * register itself with the {@code DriverManager}.  Rather, a
+ * {@code DataSource} object is retrieved though a lookup operation
+ * and then used to create a {@code Connection} object.  With a basic
+ * implementation, the connection obtained through a {@code DataSource}
+ * object is identical to a connection obtained through the
+ * {@code DriverManager} facility.
+ * <p>
+ * An implementation of {@code DataSource} must include a public no-arg
+ * constructor.
+ *
+ * @since 1.4
+ */
+
+public interface DataSource  extends CommonDataSource, Wrapper {
+
+  /**
+   * <p>Attempts to establish a connection with the data source that
+   * this {@code DataSource} object represents.
+   *
+   * @return  a connection to the data source
+   * @exception SQLException if a database access error occurs
+   * @throws java.sql.SQLTimeoutException  when the driver has determined that the
+   * timeout value specified by the {@code setLoginTimeout} method
+   * has been exceeded and has at least tried to cancel the
+   * current database connection attempt
+   */
+  Connection getConnection() throws SQLException;
+
+  /**
+   * <p>Attempts to establish a connection with the data source that
+   * this {@code DataSource} object represents.
+   *
+   * @param username the database user on whose behalf the connection is
+   *  being made
+   * @param password the user's password
+   * @return  a connection to the data source
+   * @exception SQLException if a database access error occurs
+   * @throws java.sql.SQLTimeoutException  when the driver has determined that the
+   * timeout value specified by the {@code setLoginTimeout} method
+   * has been exceeded and has at least tried to cancel the
+   * current database connection attempt
+   * @since 1.4
+   */
+  Connection getConnection(String username, String password)
+    throws SQLException;
+}
+
+```
+
+mybatis提供实现：
+
+- org.apache.ibatis.datasource.unpooled.UnpooledDataSource
+- org.apache.ibatis.datasource.pooled.PooledDataSource
+
+DataSource的创建使用了工厂方法模式
+
+- org.apache.ibatis.datasource.DataSourceFactory
+
+  - org.apache.ibatis.datasource.unpooled.UnpooledDataSourceFactory
+
+  - org.apache.ibatis.datasource.pooled.PooledDataSourceFactory：相比UnpooledDataSourceFactory，只是将dataSource属性改为PooledDataSource类型：
+
+    ```java
+    package org.apache.ibatis.datasource.pooled;
+    
+    import org.apache.ibatis.datasource.unpooled.UnpooledDataSourceFactory;
+    
+    /**
+     * @author Clinton Begin
+     */
+    public class PooledDataSourceFactory extends UnpooledDataSourceFactory {
+    
+      public PooledDataSourceFactory() {
+        this.dataSource = new PooledDataSource();
+      }
+    
+    }
+    
+    ```
+
+    
+
 未记录（需重点分析）
 
 
@@ -1241,3 +1719,142 @@ org.apache.ibatis.io.VFS#getInstance:
 
 
 ### 缓存模块
+
+
+
+#### Cache
+
+缓存key，在mybatis中难以通过一个字符串来作为key，其中涉及到动态sql等方面因素，所以使用一个对象作为key
+
+cache重写了equals和hashcode方法
+
+```java
+public boolean equals(Object object) {
+    if (this == object) {
+        return true;
+    } else if (!(object instanceof CacheKey)) {
+        return false;
+    } else {
+        CacheKey cacheKey = (CacheKey)object;
+        if (this.hashcode != cacheKey.hashcode) {
+            return false;
+        } else if (this.checksum != cacheKey.checksum) {
+            return false;
+        } else if (this.count != cacheKey.count) {
+            return false;
+        } else {
+            for(int i = 0; i < this.updateList.size(); ++i) {
+                Object thisObject = this.updateList.get(i);
+                Object thatObject = cacheKey.updateList.get(i);
+                if (!ArrayUtil.equals(thisObject, thatObject)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+}
+
+public int hashCode() {
+    return this.hashcode;
+}
+```
+
+从中看出确定是否同一个缓存的属性为：
+
+```java
+    private int hashcode;
+    private long checksum;
+    private int count;
+    private List<Object> updateList;
+```
+
+update方法会对updateList更新，并以此计算出其他值，可见最终确定唯一性的字段是updateList中的对象
+
+```java
+public void update(Object object) {
+    int baseHashCode = object == null ? 1 : ArrayUtil.hashCode(object);
+    ++this.count;
+    this.checksum += (long)baseHashCode;
+    baseHashCode *= this.count;
+    this.hashcode = this.multiplier * this.hashcode + baseHashCode;
+    this.updateList.add(object);
+}
+```
+
+![image-20210721092837981](D:\markdownfiles\orm.assets\image-20210721092837981.png)
+
+
+
+
+
+## 核心处理层
+
+从xml启动的方式查找入口：
+
+org.apache.ibatis.builder.xml.XMLConfigBuilder#parseConfiguration
+
+```java
+  private void parseConfiguration(XNode root) {
+    try {
+      // issue #117 read properties first
+      propertiesElement(root.evalNode("properties"));
+      Properties settings = settingsAsProperties(root.evalNode("settings"));
+      loadCustomVfs(settings);
+      loadCustomLogImpl(settings);
+      typeAliasesElement(root.evalNode("typeAliases"));
+      pluginElement(root.evalNode("plugins"));
+      objectFactoryElement(root.evalNode("objectFactory"));
+      objectWrapperFactoryElement(root.evalNode("objectWrapperFactory"));
+      reflectorFactoryElement(root.evalNode("reflectorFactory"));
+      settingsElement(settings);
+      // read it after objectFactory and objectWrapperFactory issue #631
+      environmentsElement(root.evalNode("environments"));
+      databaseIdProviderElement(root.evalNode("databaseIdProvider"));
+      typeHandlerElement(root.evalNode("typeHandlers"));
+      mapperElement(root.evalNode("mappers"));
+    } catch (Exception e) {
+      throw new BuilderException("Error parsing SQL Mapper Configuration. Cause: " + e, e);
+    }
+  }
+```
+
+
+
+
+
+org.apache.ibatis.mapping.DatabaseIdProvider使用：
+
+mybatis-config.xml中增加DatabaseIdProvider配置：
+
+```java
+    <databaseIdProvider type="DB_VENDOR">
+        <property name="Oracle" value="oracle"/>
+        <property name="MySQL" value="mysql"/>
+    </databaseIdProvider>
+```
+
+org.apache.ibatis.mapping.VendorDatabaseIdProvider#getDatabaseName会决策出使用哪个databaseId（根据当前连接的数据库）
+
+mapper配置文件中：
+
+```java
+    <select id="getTime" resultType="String" databaseId="mysql">
+        select now() from dual
+    </select>
+
+    <select id="getTime" resultType="String" databaseId="oracle">
+        select  'oralce'||to_char(sysdate,'yyyy-mm-dd hh24:mi:ss')  from dual
+    </select>
+```
+
+这样下来，根据链接配置，会决定使用哪个语句
+
+
+
+
+
+### XMLMapperBuilder
+
+193

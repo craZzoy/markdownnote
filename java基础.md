@@ -3286,6 +3286,8 @@ https://en.wikipedia.org/wiki/Java_bytecode_instruction_listings
 
 # Optional
 
+Optional 使用注意事项：https://dzone.com/articles/using-optional-correctly-is-not-optional
+
 ## map方法
 
 ![image-20210318182205267](java基础.assets/image-20210318182205267.png)

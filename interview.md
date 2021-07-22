@@ -1,3 +1,82 @@
+# 基础
+
+1、常见网络协议
+
+- HTTP/HTTPS：超文本传输协议
+- FTP：文件传输协议
+- SMTP：简单邮件协议
+- TELNET：远程终端协议
+- POP3：邮件读取协议
+
+2、什么是JVM，java虚拟机包括什么？
+
+JVM：Java virtual machine，java虚拟机。运用硬件或者软件的手段实现的虚拟的计算机。java虚拟机包括：寄存器、堆栈、处理器
+
+3、JDK、JRE
+
+- JDK：java development kit，java开发工具包，是java开发人员所需安装的环境
+- JRE：java runtime environment，java运行环境，java程序运行所需安装的环境
+
+4、java基本数据类型
+
+boolean、byte、char、short、int、long、float、double
+
+- 整型：byte（8）、short（16）、int（32）、long（64）
+- 浮点数：float（32）、double（64）
+- 字符型：char（16）
+- 布尔型：boolean（8）
+
+5、java的数据结构有哪些？
+
+- 线性表（ArrayList）
+- 链表（LinkedList）
+- 栈（Stack）
+- 队列（Queue）
+- 图（Map）
+- 数（Tree）
+
+6、Char类型能不能转为int类型？能不能转为String类型，能不能转为double类型
+
+```java
+package com.basicvar;
+public class CharTest {
+
+    public static void main(String[] args) {
+        char c = '汉';
+        byte byteV = (byte) c;
+        short shortV = (short) c;
+        int intV = c;
+        long longV = c;
+        //不能强转为String
+        //String strV = (String) c;
+        String strV = c + "";
+        System.out.println(c);
+        System.out.printf("byteV：%d\n",byteV);
+        System.out.printf("shortV：%d\n",shortV);
+        System.out.printf("intV：%d\n",intV);
+        System.out.printf("longV：%d\n",longV);
+        System.out.printf("strV：%s\n",strV);
+    }
+
+}
+
+```
+
+```txt
+汉
+byteV：73
+shortV：27721
+intV：27721
+longV：27721
+strV：汉
+```
+
+7、char类型可以存储汉子不，char是什么编码
+
+
+
+
+
 
 
 1、springbean的生命周期

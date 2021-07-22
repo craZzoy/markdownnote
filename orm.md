@@ -2130,19 +2130,21 @@ DataSource的创建使用了工厂方法模式
   ```java
 package org.apache.ibatis.datasource;
   
+  ```
+
 import java.util.Properties;
-  
+
   import javax.sql.DataSource;
-  
+
   /**
    * @author Clinton Begin
-   */
-  public interface DataSourceFactory {
-  
+      */
+    public interface DataSourceFactory {
+
     void setProperties(Properties props);
-  
+      
     DataSource getDataSource();
-  
+
   }
   ```
   
@@ -2234,10 +2236,10 @@ import java.util.Properties;
     
     }
     
-    ```
-  
-    
-  
+  ```
+
+​    
+
   - org.apache.ibatis.datasource.pooled.PooledDataSourceFactory：相比UnpooledDataSourceFactory，只是将dataSource属性改为PooledDataSource类型：
   
     ```java
@@ -2276,7 +2278,7 @@ import java.util.Properties;
     /**
      * @author Clinton Begin
      */
-  public class JndiDataSourceFactory implements DataSourceFactory {
+    public class JndiDataSourceFactory implements DataSourceFactory {
     
       public static final String INITIAL_CONTEXT = "initial_context";
       public static final String DATA_SOURCE = "data_source";
@@ -2335,8 +2337,6 @@ import java.util.Properties;
     
     
 
-未记录（需重点分析）
-
 
 
 ### Transation
@@ -2355,7 +2355,72 @@ import java.util.Properties;
 
 ### Binding模块
 
+#### MapperRegistry
 
+org.apache.ibatis.binding.MapperRegistry主要维护mapper类与MapperProxyFactory的映射关系
+
+```java
+  private final Configuration config;
+  private final Map<Class<?>, MapperProxyFactory<?>> knownMappers = new HashMap<>();
+```
+
+增加Mapper方法：org.apache.ibatis.binding.MapperRegistry#addMapper
+
+```java
+  public <T> void addMapper(Class<T> type) {
+    if (type.isInterface()) {
+      if (hasMapper(type)) {
+        throw new BindingException("Type " + type + " is already known to the MapperRegistry.");
+      }
+      boolean loadCompleted = false;
+      try {
+        knownMappers.put(type, new MapperProxyFactory<>(type));
+        // It's important that the type is added before the parser is run
+        // otherwise the binding may automatically be attempted by the
+        // mapper parser. If the type is already known, it won't try.
+        MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
+        parser.parse();
+        loadCompleted = true;
+      } finally {
+        if (!loadCompleted) {
+          knownMappers.remove(type);
+        }
+      }
+    }
+  }
+```
+
+org.apache.ibatis.builder.annotation.MapperAnnotationBuilder#parse:
+
+```java
+  public void parse() {
+    String resource = type.toString();
+    if (!configuration.isResourceLoaded(resource)) {
+      loadXmlResource();
+      configuration.addLoadedResource(resource);
+      assistant.setCurrentNamespace(type.getName());
+      parseCache();
+      parseCacheRef();
+      for (Method method : type.getMethods()) {
+        if (!canHaveStatement(method)) {
+          continue;
+        }
+        if (getAnnotationWrapper(method, false, Select.class, SelectProvider.class).isPresent()
+            && method.getAnnotation(ResultMap.class) == null) {
+          parseResultMap(method);
+        }
+        try {
+          parseStatement(method);
+        } catch (IncompleteElementException e) {
+          configuration.addIncompleteMethod(new MethodResolver(this, method));
+        }
+      }
+    }
+    parsePendingMethods();
+  }
+```
+
+其中loadXmlResource()触发了解析mapper映射文件，生成org.apache.ibatis.mapping.MappedStatement
 
 #### ParamNameResolver
 
@@ -2364,6 +2429,19 @@ import java.util.Properties;
 
 
 ### 缓存模块
+
+#### 装饰器模式
+
+核心角色类图
+
+![image-20210720212649275](orm.assets\image-20210720212649275.png)
+
+- Component：组件
+- ConcreteComponent：具体组件实现类
+- Decorator：装饰器，所有装饰器的父类，它也实现了Component接口，并在其中封装了Component对象
+- ConcreteDecorator：具体装饰器
+
+如java.io.BufferedInputStream就是java.io.InputStream的装饰对象
 
 #### Cache接口
 
@@ -2470,7 +2548,7 @@ public class PerpetualCache implements Cache {
 
 装饰器：
 
-![image-20210720212936017](D:\BaiduNetdiskDownload\markdown笔记\orm.assets\image-20210720212936017.png)
+![image-20210720212936017](orm.assets\image-20210720212936017.png)
 
 - org.apache.ibatis.cache.decorators.BlockingCache
 
@@ -2547,6 +2625,77 @@ public void update(Object object) {
 
 从xml启动的方式查找入口：
 
+```java
+package com.mybatis.test;
+
+
+import com.mybatis.mapper.BlogMapper;
+import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.ibatis.session.SqlSessionFactoryBuilder;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 通过xml配置启动使用mybatis
+ */
+public class StartWithXml {
+
+    public static void main(String[] args) throws Exception {
+        String resource = "mybatis-config.xml";
+        InputStream stream = Resources.getResourceAsStream(resource);
+        //加载config配置文件，并创建SqlSessionFactory对象
+        SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(stream);
+        //创建SqlSession对象
+        SqlSession sqlSession = sqlSessionFactory.openSession();
+        Map<String, Object> param = new HashMap<>();
+        param.put("id", 1);
+        //Blog blog = (Blog) sqlSession.selectOne("com.mybatis.mapper.BlogMapper.selectBlogDetail", param);
+        //System.out.println(blog);
+
+        BlogMapper mapper = sqlSession.getMapper(BlogMapper.class);
+        System.out.println(mapper.getTime());
+    }
+
+}
+
+```
+
+org.apache.ibatis.session.SqlSessionFactoryBuilder#build(java.io.InputStream, java.lang.String, java.util.Properties)：
+
+```java
+public SqlSessionFactory build(InputStream inputStream, String environment, Properties properties) {
+  try {
+    XMLConfigBuilder parser = new XMLConfigBuilder(inputStream, environment, properties);
+    return build(parser.parse());
+  } catch (Exception e) {
+    throw ExceptionFactory.wrapException("Error building SqlSession.", e);
+  } finally {
+    ErrorContext.instance().reset();
+    try {
+      inputStream.close();
+    } catch (IOException e) {
+      // Intentionally ignore. Prefer previous error.
+    }
+  }
+}
+```
+
+org.apache.ibatis.builder.xml.XMLConfigBuilder#parse
+
+```java
+  public Configuration parse() {
+    if (parsed) {
+      throw new BuilderException("Each XMLConfigBuilder can only be used once.");
+    }
+    parsed = true;
+    parseConfiguration(parser.evalNode("/configuration"));
+    return configuration;
+  }
+```
+
 org.apache.ibatis.builder.xml.XMLConfigBuilder#parseConfiguration
 
 ```java
@@ -2574,7 +2723,7 @@ org.apache.ibatis.builder.xml.XMLConfigBuilder#parseConfiguration
   }
 ```
 
-
+这里主要是解析mybatis-config文件，然后组装成org.apache.ibatis.session.Configuration配置
 
 
 
@@ -2611,19 +2760,159 @@ mapper配置文件中：
 
 ### XMLMapperBuilder
 
-#### 装饰器模式
+org.apache.ibatis.builder.xml.XMLMapperBuilder主要是解析mapper映射文件
 
-核心角色类图
+org.apache.ibatis.builder.xml.XMLMapperBuilder#parse
 
-![image-20210720212649275](D:\BaiduNetdiskDownload\markdown笔记\orm.assets\image-20210720212649275.png)
+```java
+  public void parse() {
+    if (!configuration.isResourceLoaded(resource)) {
+      configurationElement(parser.evalNode("/mapper"));
+      configuration.addLoadedResource(resource);
+      //绑定mapper class和映射文件
+      bindMapperForNamespace();
+    }
+	//重新解析失败的内容
+    parsePendingResultMaps();
+    parsePendingCacheRefs();
+    parsePendingStatements();
+  }
+```
 
-- Component：组件
-- ConcreteComponent：具体组件实现类
-- Decorator：装饰器，所有装饰器的父类，它也实现了Component接口，并在其中封装了Component对象
-- ConcreteDecorator：具体装饰器
-
-如java.io.BufferedInputStream就是java.io.InputStream的装饰对象
 
 
 
-193
+
+### XMLStatementBuilder
+
+org.apache.ibatis.builder.xml.XMLStatementBuilder用来解析mapper文件中的SQL节点
+
+mybatis中使用org.apache.ibatis.mapping.SqlSource表示映射文件或者注解中的SQL语句
+
+```java
+package org.apache.ibatis.mapping;
+
+/**
+ * Represents the content of a mapped statement read from an XML file or an annotation.
+ * It creates the SQL that will be passed to the database out of the input parameter received from the user.
+ *
+ * @author Clinton Begin
+ */
+public interface SqlSource {
+
+  BoundSql getBoundSql(Object parameterObject);
+
+}
+```
+
+mybatis中使用org.apache.ibatis.mapping.**MappedStatement**表示映射文件中定义的SQL节点，其中属性：
+
+```java
+  private String resource; 
+  private Configuration configuration;
+  private String id;
+  private Integer fetchSize;
+  private Integer timeout;
+  private StatementType statementType;
+  private ResultSetType resultSetType;
+  private SqlSource sqlSource; //对应一条SQL语句
+  private Cache cache;
+  private ParameterMap parameterMap;
+  private List<ResultMap> resultMaps;
+  private boolean flushCacheRequired;
+  private boolean useCache;
+  private boolean resultOrdered;
+  private SqlCommandType sqlCommandType; //SQL类型 INSERT SELECT DELETE UPDATE
+  private KeyGenerator keyGenerator;
+  private String[] keyProperties;
+  private String[] keyColumns;
+  private boolean hasNestedResultMaps;
+  private String databaseId;
+  private Log statementLog;
+  private LanguageDriver lang;
+  private String[] resultSets;
+```
+
+
+
+解析SQL节点入口：org.apache.ibatis.builder.xml.**XMLStatementBuilder**#parseStatementNode
+
+```java
+  public void parseStatementNode() {
+    String id = context.getStringAttribute("id");
+    String databaseId = context.getStringAttribute("databaseId");
+
+    if (!databaseIdMatchesCurrent(id, databaseId, this.requiredDatabaseId)) {
+      return;
+    }
+
+    String nodeName = context.getNode().getNodeName();
+    SqlCommandType sqlCommandType = SqlCommandType.valueOf(nodeName.toUpperCase(Locale.ENGLISH));
+    boolean isSelect = sqlCommandType == SqlCommandType.SELECT;
+    boolean flushCache = context.getBooleanAttribute("flushCache", !isSelect);
+    boolean useCache = context.getBooleanAttribute("useCache", isSelect);
+    boolean resultOrdered = context.getBooleanAttribute("resultOrdered", false);
+
+    // Include Fragments before parsing
+    XMLIncludeTransformer includeParser = new XMLIncludeTransformer(configuration, builderAssistant);
+    includeParser.applyIncludes(context.getNode());
+
+    String parameterType = context.getStringAttribute("parameterType");
+    Class<?> parameterTypeClass = resolveClass(parameterType);
+
+    String lang = context.getStringAttribute("lang");
+    LanguageDriver langDriver = getLanguageDriver(lang);
+
+    // Parse selectKey after includes and remove them.
+    processSelectKeyNodes(id, parameterTypeClass, langDriver);
+
+    // Parse the SQL (pre: <selectKey> and <include> were parsed and removed)
+    KeyGenerator keyGenerator;
+    String keyStatementId = id + SelectKeyGenerator.SELECT_KEY_SUFFIX;
+    keyStatementId = builderAssistant.applyCurrentNamespace(keyStatementId, true);
+    if (configuration.hasKeyGenerator(keyStatementId)) {
+      keyGenerator = configuration.getKeyGenerator(keyStatementId);
+    } else {
+      keyGenerator = context.getBooleanAttribute("useGeneratedKeys",
+          configuration.isUseGeneratedKeys() && SqlCommandType.INSERT.equals(sqlCommandType))
+          ? Jdbc3KeyGenerator.INSTANCE : NoKeyGenerator.INSTANCE;
+    }
+
+    SqlSource sqlSource = langDriver.createSqlSource(configuration, context, parameterTypeClass);
+    StatementType statementType = StatementType.valueOf(context.getStringAttribute("statementType", StatementType.PREPARED.toString()));
+    Integer fetchSize = context.getIntAttribute("fetchSize");
+    Integer timeout = context.getIntAttribute("timeout");
+    String parameterMap = context.getStringAttribute("parameterMap");
+    String resultType = context.getStringAttribute("resultType");
+    Class<?> resultTypeClass = resolveClass(resultType);
+    String resultMap = context.getStringAttribute("resultMap");
+    String resultSetType = context.getStringAttribute("resultSetType");
+    ResultSetType resultSetTypeEnum = resolveResultSetType(resultSetType);
+    if (resultSetTypeEnum == null) {
+      resultSetTypeEnum = configuration.getDefaultResultSetType();
+    }
+    String keyProperty = context.getStringAttribute("keyProperty");
+    String keyColumn = context.getStringAttribute("keyColumn");
+    String resultSets = context.getStringAttribute("resultSets");
+
+    builderAssistant.addMappedStatement(id, sqlSource, statementType, sqlCommandType,
+        fetchSize, timeout, parameterMap, parameterTypeClass, resultMap, resultTypeClass,
+        resultSetTypeEnum, flushCache, useCache, resultOrdered,
+        keyGenerator, keyProperty, keyColumn, databaseId, langDriver, resultSets);
+  }
+```
+
+最终会往Configuration中增加解析后的MappedStatement对象
+
+```java
+  protected final Map<String, MappedStatement> mappedStatements = new StrictMap<MappedStatement>("Mapped Statements collection")
+      .conflictMessageProducer((savedValue, targetValue) ->
+          ". please check " + savedValue.getResource() + " and " + targetValue.getResource());  
+  public void addMappedStatement(MappedStatement ms) {
+    mappedStatements.put(ms.getId(), ms);
+  }
+```
+
+
+
+221

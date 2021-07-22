@@ -5216,11 +5216,61 @@ ArrayList和Vector都是线程安全的数据实现，但Vector是线程安全�
 
 ## `ThreadLocal`
 
+ThreadLocal的原理就是每个线程对象Thread中维护了一个ThreadLocal.ThreadLocalMap对象，这个对象中维护了一个java.lang.ThreadLocal.ThreadLocalMap.Entry的table
 
+```java
+        static class Entry extends WeakReference<ThreadLocal<?>> {
+            /** The value associated with this ThreadLocal. */
+            Object value;
 
+            Entry(ThreadLocal<?> k, Object v) {
+                super(k);
+                value = v;
+            }
+        }
 
+        /**
+         * The initial capacity -- MUST be a power of two.
+         */
+        private static final int INITIAL_CAPACITY = 16;
 
+        /**
+         * The table, resized as necessary.
+         * table.length MUST always be a power of two.
+         */
+        private Entry[] table;
+		...
+}
+```
 
+ThreadLocal对象的set，get方法。都是根据线程获取到对应的ThreadLocalMap，然后对其中维护的table进行维护
+
+```java
+    public T get() {
+        Thread t = Thread.currentThread();
+        ThreadLocalMap map = getMap(t);
+        if (map != null) {
+            ThreadLocalMap.Entry e = map.getEntry(this);
+            if (e != null) {
+                @SuppressWarnings("unchecked")
+                T result = (T)e.value;
+                return result;
+            }
+        }
+        return setInitialValue();
+    }
+```
+
+```java
+    public void set(T value) {
+        Thread t = Thread.currentThread();
+        ThreadLocalMap map = getMap(t);
+        if (map != null)
+            map.set(this, value);
+        else
+            createMap(t, value);
+    }
+```
 
 
 

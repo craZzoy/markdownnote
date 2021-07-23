@@ -5,6 +5,10 @@ cd /
 
 
 
+# 常用工具包
+
+https://mp.weixin.qq.com/s/kTGBZLSZudocrI0NEOLOTQ
+
 # Python
 
 在linux和mac中是py文件变成可执行文件：chmod a+x hello.py

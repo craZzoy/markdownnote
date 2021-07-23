@@ -71,7 +71,9 @@ longV：27721
 strV：汉
 ```
 
-7、char类型可以存储汉子不，char是什么编码
+7、char类型可以存储汉字不，char是什么编码
+
+可以，char类型在JAVA中是用Unicode编码存储的
 
 
 

@@ -75,11 +75,215 @@ strV：汉
 
 可以，char类型在JAVA中是用Unicode编码存储的
 
+8、java中是值传递还是引用传递？
 
+理论上说，java都是引用传递。
 
+- 对于基本类型，传递的是值的副本，而不是值本身。
+- 对于对象而言，传递的是对象的引用，当一个方法操作传递参数的时候，实际操作的是引用所指的对象。
 
+```java
+package com.base;
 
+import com.domain.User;
 
+import java.lang.reflect.Field;
+
+/**
+ * 参数传递
+ */
+public class ParameterPass {
+
+    public static void main(String[] args) throws Exception {
+        int a = 4;
+        Integer inta = 290;
+        String s = "Hello";
+        User user = new User("Jack", 29, "jack@163.com");
+        testPass(a, s, user, inta);
+        System.out.println(a);
+        System.out.println(s);
+        System.out.println(user);
+        System.out.println(inta);
+    }
+
+    private static void testPass(int a, String s, User user, Integer inta) throws Exception {
+        a = 5;
+        s = "World";
+        user.setAge(30);
+        //inta = 23;
+        Field value = inta.getClass().getDeclaredField("value");
+        value.setAccessible(true);
+        value.set(inta, 350);
+    }
+
+}
+
+```
+
+```txt
+4
+Hello
+User{username='Jack', age=30, email='jack@163.com', address=null}
+350
+```
+
+```java
+package com.base;
+
+import com.domain.User;
+
+import java.lang.reflect.Field;
+
+/**
+ * 参数传递
+ */
+public class ParameterPass {
+
+    public static void main(String[] args) throws Exception {
+        int a = 4;
+        Integer inta = 290;
+        String s = "Hello";
+        User user = new User("Jack", 29, "jack@163.com");
+        testPass(a, s, user, inta);
+        System.out.println(a);
+        System.out.println(s);
+        System.out.println(user);
+        System.out.println(inta);
+    }
+
+    private static void testPass(int a, String s, User user, Integer inta) throws Exception {
+        a = 5;
+        s = "World";
+        user.setAge(30);
+        inta = 23;
+        Field value = inta.getClass().getDeclaredField("value");
+        value.setAccessible(true);
+        value.set(inta, 350);
+    }
+
+}
+
+```
+
+```txt
+4
+Hello
+User{username='Jack', age=30, email='jack@163.com', address=null}
+290
+```
+
+9、内部类和静态类的区别
+
+![image-20210724183857298](D:\BaiduNetdiskDownload\markdown笔记\interview.assets\image-20210724183857298.png)
+
+10、静态类可以被继承不？肯定可以啦，不是final修饰的都可以。
+
+11、java修饰符
+
+private（当前类可见）<default（当前包可见）<protected（当前包或子类可见）<public（所有类可见）
+
+12、接口有什么特点
+
+- 接口中声明的全是public static final修饰的常量（jdk8后可以不是）
+
+- 接口中所有方法都是抽象方法（java 8中有default）
+
+- 接口没有构造方法
+
+- 接口不能直接实例化
+
+- 接口可以多继承
+
+  ```java
+  package com.base;
+  
+  import java.io.Serializable;
+  
+  public class InterfaceTest {
+  
+  
+      interface InterfaceA extends Serializable, Cloneable {
+  
+          default void echo(){
+              System.out.println("echo");
+          }
+  
+      }
+  
+  }
+  
+  ```
+
+13、接口和抽象类有什么区别
+
+- 抽象类有构造方法，接口没有
+- 抽象类只能单继承，接口可以多继承
+- 抽象类可以有普通方法，接口中的所有方法都是抽象方法（Jdk8后可以有默认实现）
+- 接口的属性都是public static final修饰的，而抽象的不是
+
+14、说出常见的运行时异常
+
+![image-20210724220302380](D:\BaiduNetdiskDownload\markdown笔记\interview.assets\image-20210724220302380.png)
+
+15、Java中的集合框架有几个
+
+- Collection
+- Map
+
+16、List（线性表）接口和Set（无序集合）接口分别有什么特点？
+
+- 顺序存储，可以有重复值
+- 无序存储，不可以有重复值
+
+17、ArrayList和LinkedList有什么区别？
+
+- ArrayList是基于数组实现的线性表。尾端插入和查询性能较高
+- LinkedArrayList是基于双向链表实现的线性表。插入和删除性能较高，查找性能低。
+
+18、JDBC操作的步骤
+
+1. 加载驱动
+2. 打开数据库连接
+3. 执行语句
+4. 处理结果
+5. 关闭资源
+
+19、JDBC中怎么防止sql注入？
+
+使用PrepareStatement（可以强制转换参数）而不是Statement
+
+20、连接池的好处？
+
+对于客户端来说，可以很好的管理、分配、释放数据库连接资源。而对于数据库来说，连接池可以控制连接的数量，以免数据库因为连接过多而导致性能问题。
+
+21、数据源技术有哪些？好处是什么
+
+DBCP、C3P0等，用的C3P0较多，因为其比较稳定，安全。
+
+通过使用数据源，可以在配置文件中配置数据库相关的配置，而不是通过硬编码的方式。
+
+22、Java中的IO分为哪两种
+
+- 按功能
+  - 输出流
+  - 输入流
+- 按类型
+  - 字节流
+  - 字符流
+
+23、常用的IO类有哪些？
+
+![image-20210724223825370](D:\BaiduNetdiskDownload\markdown笔记\interview.assets\image-20210724223825370.png)
+
+24、字节流和字符流的区别
+
+- 字节流：以字节为单位，按8位传输
+- 字符流：以字符为单位，按16位传输
+
+25、进程和线程
+
+- 进程：操作系统进行资源分配和调度的基本单位。如exe就是以进程的运行的。
+- 线程：轻量级进程。程序执行的最小单元。
 
 1、springbean的生命周期
 2、bean的作用域

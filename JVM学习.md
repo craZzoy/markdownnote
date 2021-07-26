@@ -346,26 +346,34 @@ Exception in thread "main" java.lang.OutOfMemoryError
   ```java
   package com.test;
   
-  public class GcDemo {
+  import java.lang.ref.PhantomReference;
+  import java.lang.ref.Reference;
+  import java.lang.ref.ReferenceQueue;
+  import java.lang.ref.SoftReference;
   
-      private static final int _1MB = 1024*1024;
+  public class ReferenceCountingGc {
+  
+      private Object instance = null;
   
       //用于占用内存，以便查看是否gc
-      private byte[] bigSize = new byte[2*_1MB];
+      private byte[] bigSize = new byte[2 * _1MB];
+  
+      private static final int _1MB = 8 * 1024 * 1024;
   
       public static void main(String[] args) {
   //        char ch = '你';
   //        System.out.println(Character.valueOf(ch));
-          testIsRefrenceCountingGc();
+          testIsReferenceCountingGc();
+          //testReference();
       }
   
       /**
        * 测试是否引用计数法
        * VM args：-XX:+PrintGCDetails -XX:+PrintGCTimeStamps
        */
-      public static void testIsRefrenceCountingGc(){
-          RefrenceCountingGc objA = new RefrenceCountingGc();
-          RefrenceCountingGc objB = new RefrenceCountingGc();
+      public static void testIsReferenceCountingGc() {
+          ReferenceCountingGc objA = new ReferenceCountingGc();
+          ReferenceCountingGc objB = new ReferenceCountingGc();
           objA.instance = objB;
           objB.instance = objA;
   
@@ -375,47 +383,46 @@ Exception in thread "main" java.lang.OutOfMemoryError
           System.gc();
       }
   
-      static class RefrenceCountingGc{
-          public Object instance = null;
-      }
   }
+  
   
   ```
 
   输出：
 
   ```properties
-  0.217: [GC (System.gc()) [PSYoungGen: 3336K->808K(38400K)] 3336K->816K(125952K), 0.0014017 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
-  0.219: [Full GC (System.gc()) [PSYoungGen: 808K->0K(38400K)] [ParOldGen: 8K->665K(87552K)] 816K->665K(125952K), [Metaspace: 3364K->3364K(1056768K)], 0.0074006 secs] [Times: user=0.00 sys=0.00, real=0.01 secs] 
+  0.546: [GC (Allocation Failure) [PSYoungGen: 19060K->840K(38400K)] 19060K->17232K(125952K), 0.0159288 secs] [Times: user=0.00 sys=0.00, real=0.02 secs] 
+  0.565: [GC (System.gc()) [PSYoungGen: 17556K->712K(71680K)] 33948K->17104K(159232K), 0.0011647 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+  0.566: [Full GC (System.gc()) [PSYoungGen: 712K->0K(71680K)] [ParOldGen: 16392K->627K(87552K)] 17104K->627K(159232K), [Metaspace: 3360K->3360K(1056768K)], 0.0047682 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
   Heap
-   PSYoungGen      total 38400K, used 998K [0x00000000d5f00000, 0x00000000d8980000, 0x0000000100000000)
-    eden space 33280K, 3% used [0x00000000d5f00000,0x00000000d5ff9b20,0x00000000d7f80000)
-    from space 5120K, 0% used [0x00000000d7f80000,0x00000000d7f80000,0x00000000d8480000)
-    to   space 5120K, 0% used [0x00000000d8480000,0x00000000d8480000,0x00000000d8980000)
-   ParOldGen       total 87552K, used 665K [0x0000000081c00000, 0x0000000087180000, 0x00000000d5f00000)
-    object space 87552K, 0% used [0x0000000081c00000,0x0000000081ca6650,0x0000000087180000)
-   Metaspace       used 3371K, capacity 4500K, committed 4864K, reserved 1056768K
-    class space    used 373K, capacity 388K, committed 512K, reserved 1048576K
+   PSYoungGen      total 71680K, used 3101K [0x00000000d5f00000, 0x00000000daa00000, 0x0000000100000000)
+    eden space 66560K, 4% used [0x00000000d5f00000,0x00000000d62074b8,0x00000000da000000)
+    from space 5120K, 0% used [0x00000000da500000,0x00000000da500000,0x00000000daa00000)
+    to   space 5120K, 0% used [0x00000000da000000,0x00000000da000000,0x00000000da500000)
+   ParOldGen       total 87552K, used 627K [0x0000000081c00000, 0x0000000087180000, 0x00000000d5f00000)
+    object space 87552K, 0% used [0x0000000081c00000,0x0000000081c9cc90,0x0000000087180000)
+   Metaspace       used 3404K, capacity 4500K, committed 4864K, reserved 1056768K
+    class space    used 370K, capacity 388K, committed 512K, reserved 1048576K
   ```
 
   日志理解：
 
   ```properties
-  0.217: [GC (System.gc()) [PSYoungGen: 3336K->808K(38400K)] 3336K->816K(125952K), 0.0014017 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+  0.565: [GC (System.gc()) [PSYoungGen: 17556K->712K(71680K)] 33948K->17104K(159232K), 0.0011647 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
   ```
 
-  - “`0.217`”指gc发生的时间，含义是从java虚拟机启动后经过的秒数
+  - “`0.565`”指gc发生的时间，含义是从java虚拟机启动后经过的秒数
   - “`GC (System.gc())`”表示垃圾收集的停顿类型
-  - `PSYoungGen: 3336K->808K(38400K)`表示“gc前新生代使用内存->gc后新生代使用内存（新生代内存区域总容量），依次类似
-  - `3336K->816K(125952K)`表示堆的容量信息
+  - `PSYoungGen: 17556K->712K(71680K)`表示“gc前新生代使用内存->gc后新生代使用内存（新生代内存区域总容量），依次类似
+  - `33948K->17104K(159232K)`表示堆的容量信息
   - `Times: user=0.00 sys=0.00, real=0.00 secs`分别表示
     - 用户态消耗CPU时间
     - 内核态消耗CPU时间
     - 开始到结束经过的墙钟时间（例如IO耗时、阻塞耗时）
 
-  从`816K->665K(125952K)`侧面反映出对象已经被回收，即java使用的判断算法并非是引用计数器算法
+  从`19060K->840K(38400K)`侧面反映出对象已经被回收，即java使用的判断算法并非是引用计数器算法
 
-- 可达性分析算法：通过一系列的称为“GC Roots”的对象作为起点，从这个节点沿着“引用链”往下搜索，当一个对象到Gc Roots没有任何一个引用链相连时，即GC不可达时，对象不可用。
+- 可达性分析算法：通过一系列的称为“GC Roots”的对象作为起点，从这个节点沿着“引用链”往下搜索，当一个对象到Gc Roots没有任何一个引用链相连时，即GC不可达时，对象不可用。注意的是，不可达对象不等价于可回收对象，不可达对象变为可回收对象至少要经过两次标记过程。两次标记后仍然是可回收对象，则将面临回收。
 
   ![1570446496507](类加载器与双亲委派模型.assets\1570446496507.png)
 
